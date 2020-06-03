@@ -531,7 +531,7 @@ public:
     bool isMicOnOff() {return isMicOn;}
     void setMicAnalyseDivider(uint8_t val) {micAnalyseDivider = val&3;}
 #endif
-
+    
 
     bool isLoading() {if(!loadingFlag) return loadingFlag; else {loadingFlag=false; return true;}}
     void setLoading(bool flag=true) {loadingFlag = flag;}

@@ -550,8 +550,11 @@ void LAMP::effectsTick()
 
   if(!isEffectsDisabledUntilText){
     // отрисовать текущий эффект (если есть) 
+    /*
     if(effects.getCurrent()->func!=nullptr){
       effects.getCurrent()->func(getUnsafeLedsArray(), effects.getCurrent()->param);
+    */
+    if(effects.worker->run(getUnsafeLedsArray(), effects.getCurrent()->param)) {
 #ifdef USELEDBUF
       ledsbuff.resize(NUM_LEDS);
       std::copy(leds, leds + NUM_LEDS, ledsbuff.begin());

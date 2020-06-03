@@ -42,12 +42,7 @@ JeeUI2 lib used under MIT License Copyright (c) 2019 Marsel Akhkamov
 #include <ArduinoJson.h>
 #include <string.h>
 //#include <FastLed.h>
-#ifdef ESP8266
-#include <ESP8266WiFi.h>
-#elif defined ESP32
-#include <WiFi.h>
-#include "SPIFFS.h"
-#endif
+#include <FS.h>
 #include "effects_types.h"
 
 
@@ -104,6 +99,9 @@ EFF_TIME = (98)                               // Часы (служебный, �
 #endif
 } EFF_ENUM;
 
+
+
+
 void sparklesRoutine(CRGB*, const char*);
 void fireRoutine(CRGB*, const char*);
 void whiteColorStripeRoutine(CRGB*, const char*);
@@ -111,8 +109,8 @@ void fire2012WithPalette(CRGB*, const char*);
 void pulseRoutine(CRGB*, const char*);
 void rainbowDiagonalRoutine(CRGB*, const char*);
 void colorsRoutine(CRGB*, const char*);
-void matrixRoutine(CRGB*, const char*);
-void snowRoutine(CRGB*, const char*);
+// void matrixRoutine(CRGB*, const char*);
+// void snowRoutine(CRGB*, const char*);
 void snowStormStarfallRoutine(CRGB*, const char*);
 void lightersRoutine(CRGB*, const char*);
 void ballsRoutine(CRGB*, const char*);
@@ -268,9 +266,11 @@ static EFFECT _EFFECTS_ARR[] = {
     {true, true, 127, 127, 127, EFF_COLORS, T_COLORS, colorsRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_RAINBOW_2D, T_RAINBOW_2D, rainbowDiagonalRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_SPARKLES, T_SPARKLES, sparklesRoutine, nullptr},
-    {true, true, 127, 127, 127, EFF_SNOW, T_SNOW, snowRoutine, nullptr},    
+//    {true, true, 127, 127, 127, EFF_SNOW, T_SNOW, snowRoutine, nullptr},    
+    {true, true, 127, 127, 127, EFF_SNOW, T_SNOW, colorsRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_SNOWSTORMSTARFALL, T_SNOWSTORMSTARFALL, snowStormStarfallRoutine, nullptr},
-    {true, true, 127, 127, 127, EFF_MATRIX, T_MATRIX, matrixRoutine, nullptr},
+//    {true, true, 127, 127, 127, EFF_MATRIX, T_MATRIX, matrixRoutine, nullptr},
+    {true, true, 127, 127, 127, EFF_MATRIX, T_MATRIX, colorsRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_LIGHTERS, T_LIGHTERS, lightersRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_LIGHTER_TRACES, T_LIGHTER_TRACES, ballsRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_CUBE, T_CUBE, ballRoutine, nullptr},
@@ -484,6 +484,38 @@ public:
 	};
 };
 
+/*
+ * Null Calc effect does nothing actually
+ */
+class EffectCalc {
+private:
+    uint32_t _lastrun;
+
+public:
+    EffectCalc(){_lastrun=millis();}
+    virtual void init(){}
+    virtual bool run(CRGB* ledarr, const char *opt=nullptr);
+    bool dryrun();
+    virtual ~EffectCalc();
+};
+
+class EffectMatrix : public EffectCalc {
+private:
+    bool matrixRoutine(CRGB *leds, const char *param);
+
+public:
+    bool run(CRGB *ledarr, const char *opt=nullptr) override;
+};
+
+class EffectSnow : public EffectCalc {
+private:
+    bool snowRoutine(CRGB *leds, const char *param);
+
+public:
+    bool run(CRGB *ledarr, const char *opt=nullptr) override;
+};
+
+
 class EffectWorker {
 private:
     const int MODE_AMOUNT = sizeof(_EFFECTS_ARR)/sizeof(EFFECT);     // количество режимов
@@ -493,15 +525,18 @@ private:
     unsigned int arrIdx = 0;
     unsigned int storedIdx = 0; // предыдущий эффект
     EFFECT* effects = _EFFECTS_ARR;
+    void workerset(EFF_ENUM effect);        // выбор нужного класса
 
     EffectWorker(const EffectWorker&);  // noncopyable
     EffectWorker& operator=(const EffectWorker&);  // noncopyable
 public:
     EffectWorker() {
-        //loadConfig();       
+        workerset(EFF_NONE);
     }
 
     ~EffectWorker() {}
+
+    EffectCalc* worker = nullptr;           // класс-обработчик эффекта
 
     void loadConfig(const char *cfg = nullptr) {
         if(SPIFFS.begin()){
@@ -613,6 +648,7 @@ public:
             if(effects[i].canBeSelected){
                 arrIdx = i;
                 curEff = effects[i].eff_nb;
+                workerset(curEff);
                 return;
             }
         }
@@ -621,6 +657,7 @@ public:
             if(effects[i].canBeSelected){
                 arrIdx = i;
                 curEff = effects[i].eff_nb;
+                workerset(curEff);
                 return;
             }
         }
@@ -634,6 +671,7 @@ public:
             if(effects[i].canBeSelected){
                 arrIdx = i;
                 curEff = effects[i].eff_nb;
+                workerset(curEff);
                 return;
             }
         }
@@ -642,6 +680,7 @@ public:
             if(effects[i].canBeSelected){
                 arrIdx = i;
                 curEff = effects[i].eff_nb;
+                workerset(curEff);
                 return;
             }
         }
@@ -652,6 +691,7 @@ public:
             if(effects[i].eff_nb == select){
                 arrIdx = i;
                 curEff = effects[i].eff_nb;
+                workerset(curEff);
             }
         }
     }
@@ -664,6 +704,7 @@ public:
                 if(effects[i].isFavorite && cnt==0){
                     arrIdx = i;
                     curEff = effects[i].eff_nb;
+                    workerset(curEff);
                     return;
                 }
             }
@@ -671,6 +712,7 @@ public:
             else {
                 arrIdx = 0;
                 curEff = effects[0].eff_nb;
+                workerset(curEff);
             }
         }
     }
@@ -710,5 +752,7 @@ typedef enum _PERIODICTIME {
   PT_EVERY_5,
   PT_EVERY_1,
 } PERIODICTIME;
+
+
 
 #endif

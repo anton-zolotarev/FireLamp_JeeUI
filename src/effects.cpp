@@ -74,6 +74,26 @@ extern const TProgmemRGBPalette16 RubidiumFireColors_p FL_PROGMEM = {CRGB::Black
 extern const TProgmemRGBPalette16 PotassiumFireColors_p FL_PROGMEM = {CRGB::Black, CRGB::Indigo, CRGB::MediumPurple, CRGB::DeepPink}; //* Violet
 extern const TProgmemRGBPalette16 LithiumFireColors_p FL_PROGMEM = {CRGB::Black, CRGB::FireBrick, CRGB::Pink, CRGB::DeepPink};        //* Red
 
+
+bool EffectCalc::run(CRGB* ledarr, const char *opt){
+  return false;
+}
+
+/*
+ * проверка на холостой вызов для эффектов с доп. задержкой
+ */
+bool EffectCalc::dryrun(){
+  if((millis() - _lastrun - EFFECTS_RUN_TIMER) < (unsigned)(255-myLamp.effects.getSpeed())){
+    return true;
+  } else {
+    _lastrun = millis();
+    return false;
+  }
+}
+
+// Must include non-inline virtual destructor
+EffectCalc::~EffectCalc(){}
+
 //----------------------------------------------------
 void fadePixel(uint8_t i, uint8_t j, uint8_t step)          // новый фейдер
 {
@@ -491,14 +511,14 @@ EVERY_N_SECONDS(1){
 }
 
 // ------------- матрица ---------------
-void matrixRoutine(CRGB *leds, const char *param)
-{
-  if((millis() - myLamp.getEffDelay() - EFFECTS_RUN_TIMER) < (unsigned)(255-myLamp.effects.getSpeed())){
-    return;
-  } else {
-    myLamp.setEffDelay(millis());
-  }
+bool EffectMatrix::run(CRGB *ledarr, const char *opt){
+  if (dryrun())
+    return false;
+  return matrixRoutine(*&ledarr, &*opt);
+}
 
+bool EffectMatrix::matrixRoutine(CRGB *leds, const char *param)
+{
   for (uint8_t x = 0U; x < WIDTH; x++)
   {
     // обрабатываем нашу матрицу снизу вверх до второй сверху строчки
@@ -544,17 +564,18 @@ void matrixRoutine(CRGB *leds, const char *param)
       myLamp.drawPixelXY(x, HEIGHT - 1U, thisColor - 0x0a1000);                                     // в остальных случаях снижаем яркость на 1 уровень
       //myLamp.drawPixelXY(x, HEIGHT - 1U, thisColor - 0x050800);                                     // для длинных хвостов
   }
+
+  return true;
 }
 
 // ------------- снегопад ----------
+bool EffectSnow::run(CRGB *ledarr, const char *opt){
+  return snowRoutine(*&ledarr, &*opt);
+}
+
 #define SNOW_SCALE (1.25) //0.25...5.0
-void snowRoutine(CRGB *leds, const char *param)
+bool EffectSnow::snowRoutine(CRGB *leds, const char *param)
 {
-  // if((millis() - myLamp.getEffDelay() - EFFECTS_RUN_TIMER) < (unsigned)(255-myLamp.effects.getSpeed())){
-  //   return;
-  // } else {
-  //   myLamp.setEffDelay(millis());
-  // }
 
   if(myLamp.isLoading()){
     GSHMEM.snowShift = 0.0;
@@ -589,6 +610,7 @@ void snowRoutine(CRGB *leds, const char *param)
   }
   // т.к. не храним позицию, то смещаем все синхронно, но в идеале - хранить позиции
   GSHMEM.snowShift = (SNOW_SCALE*GSHMEM.snowShift > 1.0 ? (SNOW_SCALE*GSHMEM.snowShift - (int)(GSHMEM.snowShift*SNOW_SCALE)) : (GSHMEM.snowShift));
+  return true;
 }
 
 // ------------- метель -------------
@@ -3176,4 +3198,26 @@ void multipleStreamSmokeRoutine(CRGB *leds, const char *param)
   MoveFractionalNoiseY(3);//4
 
   myLamp.blur2d(25); // без размытия как-то пиксельно, наверное...
+}
+
+/*
+ * Создаем экземпляр класса калькулятора в зависимости от требуемого эффекта
+ */
+void EffectWorker::workerset(EFF_ENUM effect){
+
+  if (worker != nullptr) {
+    delete worker;
+  }
+
+  switch (effect)
+  {
+  case EFF_ENUM::EFF_MATRIX :
+    worker = new EffectMatrix();
+    break;
+  case EFF_ENUM::EFF_SNOW :
+    worker = new EffectSnow();
+    break;
+  default:
+    worker = new EffectCalc();
+  }
 }

@@ -75,6 +75,19 @@ extern const TProgmemRGBPalette16 PotassiumFireColors_p FL_PROGMEM = {CRGB::Blac
 extern const TProgmemRGBPalette16 LithiumFireColors_p FL_PROGMEM = {CRGB::Black, CRGB::FireBrick, CRGB::Pink, CRGB::DeepPink};        //* Red
 
 
+void EffectCalc::init(EFF_ENUM _eff, byte _brt, byte _spd, byte _scl){
+  effect=_eff;
+  brightness=_brt;
+  speed=_spd;
+  scale=_scl;
+  load();
+}
+
+/*
+ *  первоначальная загрузка эффекта, автозапускается из init()
+ */
+void EffectCalc::load(){}
+
 bool EffectCalc::run(CRGB* ledarr, const char *opt){
   return false;
 }
@@ -83,10 +96,10 @@ bool EffectCalc::run(CRGB* ledarr, const char *opt){
  * проверка на холостой вызов для эффектов с доп. задержкой
  */
 bool EffectCalc::dryrun(){
-  if((millis() - _lastrun - EFFECTS_RUN_TIMER) < (unsigned)(255-myLamp.effects.getSpeed())){
+  if((millis() - lastrun - EFFECTS_RUN_TIMER) < (unsigned)(255-speed)){
     return true;
   } else {
-    _lastrun = millis();
+    lastrun = millis();
     return false;
   }
 }
@@ -125,41 +138,43 @@ void fader(uint8_t step)
 // ============= ЭФФЕКТЫ ===============
 
 // ------------- конфетти --------------
+bool EffectSparcles::run(CRGB *ledarr, const char *opt){
+  return sparklesRoutine(*&ledarr, &*opt);
+}
+
 #define EFF_FADE_OUT_SPEED        (15U)                         // скорость затухания
-void sparklesRoutine(CRGB *leds, const char *param)
+bool EffectSparcles::sparklesRoutine(CRGB *leds, const char *param)
 {
 
 #ifdef MIC_EFFECTS
-  uint8_t mmf = myLamp.getMicMapFreq();
-  uint8_t mmp = myLamp.getMicMapMaxPeak();
-  GSHMEM.scale = constrain(myLamp.effects.getScale()*(mmf<LOW_FREQ_MAP_VAL && mmp>MIN_PEAK_LEVEL?3.0:(mmp?0.012*mmp:1.0)),1,255);
-  GSHMEM.speed = constrain(myLamp.effects.getSpeed()*(mmf>0?(1.5*(mmf/255.0)+0.33):1),1,255);
+  mmf = myLamp.getMicMapFreq();
+  mmp = myLamp.getMicMapMaxPeak();
+  scale = constrain(myLamp.effects.getScale()*(mmf<LOW_FREQ_MAP_VAL && mmp>MIN_PEAK_LEVEL?3.0:(mmp?0.012*mmp:1.0)),1,255);
+  speed = constrain(myLamp.effects.getSpeed()*(mmf>0?(1.5*(mmf/255.0)+0.33):1),1,255);
 // #if defined(LAMP_DEBUG) && defined(MIC_EFFECTS)
 // EVERY_N_SECONDS(1){
 //   LOG.printf_P(PSTR("MF: %5.2f MMF: %d MMP: %d GSHMEM.scale %d GSHMEM.speed: %d\n"), myLamp.getMicFreq(), mmf, mmp, GSHMEM.scale, GSHMEM.speed);
 // }
 // #endif
-#else
-  GSHMEM.scale = myLamp.effects.getScale();
-  GSHMEM.speed = myLamp.effects.getSpeed();
+//#else
+//  opts.scale = myLamp.effects.getScale(); // уже сделанно при создании экземпляра класса
+//  opts.speed = myLamp.effects.getSpeed();
 #endif
 
-  fader((uint8_t)(EFF_FADE_OUT_SPEED*((float)GSHMEM.scale)/255)+1);
+  fader((uint8_t)(EFF_FADE_OUT_SPEED*((float)scale)/255)+1);
 
-  if((millis() - myLamp.getEffDelay() - EFFECTS_RUN_TIMER) < (unsigned)(255-GSHMEM.speed)){
-    return;
-  } else {
-    myLamp.setEffDelay(millis());
-  }
+  if (dryrun())
+    return false;
 
   //EVERY_N_MILLIS(500){
-  for (uint8_t i = 0; i < (uint8_t)round(2.5*(GSHMEM.speed/255.0)+1); i++){
+  for (uint8_t i = 0; i < (uint8_t)round(2.5*(speed/255.0)+1); i++){
       uint8_t x = random(0U, WIDTH);
       uint8_t y = random(0U, HEIGHT);
       if (myLamp.getPixColorXY(x, y) == 0U){
         myLamp.setLeds(myLamp.getPixelNumber(x, y),CHSV(random(1U, 255U), random(192U, 255U), random(192U, 255U)));
       }
   }
+  return true;
 }
 
 // ------------- белый свет -------------
@@ -233,20 +248,21 @@ void whiteColorStripeRoutine(CRGB *leds, const char *param)
 }
 
 // ============= водо/огне/лава/радуга/хренопад ===============
+bool EffectFire2012::run(CRGB *ledarr, const char *opt){
+  if (dryrun())
+    return false;
+  return fire2012WithPalette(*&ledarr, &*opt);
+}
+
 // SPARKING: What chance (out of 255) is there that a new spark will be lit?
 // Higher chance = more roaring fire.  Lower chance = more flickery fire.
 // Default 120, suggested range 50-200.
 #define SPARKINGNEW 80U // 50 // 30 // 120 // 90 // 60
-void fire2012WithPalette(CRGB*leds, const char *param) {
-  if((millis() - myLamp.getEffDelay() - EFFECTS_RUN_TIMER) < (unsigned)(255-myLamp.effects.getSpeed())){
-    return;
-  } else {
-    myLamp.setEffDelay(millis());
-  }
+bool EffectFire2012::fire2012WithPalette(CRGB*leds, const char *param) {
   const TProgmemRGBPalette16 *palette_arr[] = {&PartyColors_p, &OceanColors_p, &LavaColors_p, &HeatColors_p, &WaterfallColors_p, &CloudColors_p, &ForestColors_p, &RainbowColors_p, &RainbowStripeColors_p};
   const TProgmemRGBPalette16 *curPalette = palette_arr[(int)((float)myLamp.effects.getScale()/255.1*((sizeof(palette_arr)/sizeof(TProgmemRGBPalette16 *))-1))];
 
-  uint8_t scale = myLamp.effects.getScale();
+  //uint8_t scale = myLamp.effects.getScale();
   uint8_t COOLINGNEW = constrain((uint16_t)(scale % 32) * 8 / HEIGHT + 7, 1, 255) ;
   // Array of temperature readings at each simulation cell
   // static byte GSHMEM.heat[WIDTH][HEIGHT];
@@ -258,28 +274,29 @@ void fire2012WithPalette(CRGB*leds, const char *param) {
     // Step 1.  Cool down every cell a little
     for (unsigned int i = 0; i < HEIGHT; i++) {
       //GSHMEM.heat[x][i] = qsub8(GSHMEM.heat[x][i], random8(0, ((COOLINGNEW * 10) / HEIGHT) + 2));
-      GSHMEM.heat[x][i] = qsub8(GSHMEM.heat[x][i], random8(0, COOLINGNEW));
+      heat[x][i] = qsub8(heat[x][i], random8(0, COOLINGNEW));
     }
 
     // Step 2.  Heat from each cell drifts 'up' and diffuses a little
     for (int k = HEIGHT - 1; k >= 2; k--) {
-      GSHMEM.heat[x][k] = (GSHMEM.heat[x][k - 1] + GSHMEM.heat[x][k - 2] + GSHMEM.heat[x][k - 2]) / 3;
+      heat[x][k] = (heat[x][k - 1] + heat[x][k - 2] + heat[x][k - 2]) / 3;
     }
 
     // Step 3.  Randomly ignite new 'sparks' of GSHMEM.heat near the bottom
     if (random8() < SPARKINGNEW) {
       int y = random8(2);
-      GSHMEM.heat[x][y] = qadd8(GSHMEM.heat[x][y], random8(160, 255));
+      heat[x][y] = qadd8(heat[x][y], random8(160, 255));
     }
 
     // Step 4.  Map from GSHMEM.heat cells to LED colors
     for (unsigned int j = 0; j < HEIGHT; j++) {
       // Scale the GSHMEM.heat value from 0-255 down to 0-240
       // for best results with color palettes.
-      byte colorindex = scale8(GSHMEM.heat[x][j], 240);
+      byte colorindex = scale8(heat[x][j], 240);
       myLamp.setLeds(myLamp.getPixelNumber(x, (HEIGHT - 1) - j), ColorFromPalette(*curPalette, colorindex));
     }
   }
+  return true;
 }
 
 // --------------------------- эффект пульс ----------------------
@@ -416,7 +433,7 @@ void rainbowHorVertRoutine(bool isVertical)
 }
 
 // ------------- радуга диагональная -------------
-void rainbowDiagonalRoutine(CRGB *leds, const char *param)
+void rainbowDiagonalRoutine(CRGB *leds, const char *param) 
 {
   if((millis() - myLamp.getEffDelay() - EFFECTS_RUN_TIMER)
 #ifdef MIC_EFFECTS
@@ -623,18 +640,14 @@ bool EffectSnow::snowRoutine(CRGB *leds, const char *param)
 #define STAR_SATURATION       (150U)                        // насыщенность кометы (от 0 до 255)
 
 // ------------- звездопад/метель -------------
-void snowStormStarfallRoutine(CRGB *leds, const char *param)
-{
-  if (myLamp.isLoading()){
-    FastLED.clear();
-  }
-  
-  if((millis() - myLamp.getEffDelay() - EFFECTS_RUN_TIMER) < (unsigned)(255-myLamp.effects.getSpeed())){
-    return;
-  } else {
-    myLamp.setEffDelay(millis());
-  }
+bool EffectStarFall::run(CRGB *ledarr, const char *opt){
+  if (dryrun())
+    return false;
+  return snowStormStarfallRoutine(*&ledarr, &*opt);
+}
 
+bool EffectStarFall::snowStormStarfallRoutine(CRGB *leds, const char *param)
+{
   // заполняем головами комет левую и верхнюю линию
   for (uint8_t i = HEIGHT / 2U; i < HEIGHT; i++)
   {
@@ -676,25 +689,31 @@ void snowStormStarfallRoutine(CRGB *leds, const char *param)
   {
     fadePixel(i, HEIGHT - 1U, (myLamp.effects.getScale()<127?SNOW_TAIL_STEP:STAR_TAIL_STEP));
   }
+  return true;
 }
 
 // ------------- светлячки --------------
 //#define LIGHTERS_AM           (100U)
-void lightersRoutine(CRGB *leds, const char *param)
-{
-  if (myLamp.isLoading())
+void EffectLighters::load(){
+  randomSeed(millis());
+  for (uint8_t i = 0U; i < LIGHTERS_AM; i++)
   {
-    randomSeed(millis());
-    for (uint8_t i = 0U; i < LIGHTERS_AM; i++)
-    {
-      GSHMEM.lightersIdx=0;
-      GSHMEM.lightersPos[0U][i] = random(0, WIDTH);
-      GSHMEM.lightersPos[1U][i] = random(0, HEIGHT);
-      GSHMEM.lightersSpeed[0U][i] = random(-20, 20);
-      GSHMEM.lightersSpeed[1U][i] = random(-20, 20);
-      GSHMEM.lightersColor[i] = random(0U, 255U);
-    }
+    lightersIdx=0;
+    lightersPos[0U][i] = random(0, WIDTH);
+    lightersPos[1U][i] = random(0, HEIGHT);
+    lightersSpeed[0U][i] = random(-20, 20);
+    lightersSpeed[1U][i] = random(-20, 20);
+    lightersColor[i] = random(0U, 255U);
   }
+
+}
+
+bool EffectLighters::run(CRGB *ledarr, const char *opt){
+  return lightersRoutine(*&ledarr, &*opt);
+}
+
+bool EffectLighters::lightersRoutine(CRGB *leds, const char *param)
+{
 
   float speedfactor = myLamp.effects.getSpeed()/4096.0+0.001;
 
@@ -710,33 +729,34 @@ void lightersRoutine(CRGB *leds, const char *param)
 
     EVERY_N_MILLIS(1000)
     {
-      GSHMEM.lightersIdx = (GSHMEM.lightersIdx+1)%(uint8_t)(((LIGHTERS_AM/255.0)*myLamp.effects.getScale())+1);
-      GSHMEM.lightersSpeed[0U][GSHMEM.lightersIdx] += random(-10, 10);
-      GSHMEM.lightersSpeed[1U][GSHMEM.lightersIdx] += random(-10, 10);
-      GSHMEM.lightersSpeed[0U][GSHMEM.lightersIdx] %= 21;
-      GSHMEM.lightersSpeed[1U][GSHMEM.lightersIdx] %= 21;
+      lightersIdx = (lightersIdx+1)%(uint8_t)(((LIGHTERS_AM/255.0)*myLamp.effects.getScale())+1);
+      lightersSpeed[0U][lightersIdx] += random(-10, 10);
+      lightersSpeed[1U][lightersIdx] += random(-10, 10);
+      lightersSpeed[0U][lightersIdx] %= 21;
+      lightersSpeed[1U][lightersIdx] %= 21;
     }
 
-    GSHMEM.lightersPos[0U][i] += GSHMEM.lightersSpeed[0U][i]*speedfactor;
-    GSHMEM.lightersPos[1U][i] += GSHMEM.lightersSpeed[1U][i]*speedfactor;
+    lightersPos[0U][i] += lightersSpeed[0U][i]*speedfactor;
+    lightersPos[1U][i] += lightersSpeed[1U][i]*speedfactor;
 
-    if (GSHMEM.lightersPos[0U][i] < 0) GSHMEM.lightersPos[0U][i] = (WIDTH - 1);
-    if (GSHMEM.lightersPos[0U][i] >= (int32_t)WIDTH) GSHMEM.lightersPos[0U][i] = 0;
+    if (lightersPos[0U][i] < 0) lightersPos[0U][i] = (WIDTH - 1);
+    if (lightersPos[0U][i] >= (int32_t)WIDTH) lightersPos[0U][i] = 0;
 
-    if (GSHMEM.lightersPos[1U][i] <= 0)
+    if (lightersPos[1U][i] <= 0)
     {
-      GSHMEM.lightersPos[1U][i] = 0;
-      GSHMEM.lightersSpeed[1U][i] = -GSHMEM.lightersSpeed[1U][i];
-      GSHMEM.lightersSpeed[0U][i] = -GSHMEM.lightersSpeed[0U][i];
+      lightersPos[1U][i] = 0;
+      lightersSpeed[1U][i] = -lightersSpeed[1U][i];
+      lightersSpeed[0U][i] = -lightersSpeed[0U][i];
     }
-    if (GSHMEM.lightersPos[1U][i] >= (int32_t)(HEIGHT - 1))
+    if (lightersPos[1U][i] >= (int32_t)(HEIGHT - 1))
     {
-      GSHMEM.lightersPos[1U][i] = (HEIGHT - 1U);
-      GSHMEM.lightersSpeed[1U][i] = -GSHMEM.lightersSpeed[1U][i];
-      GSHMEM.lightersSpeed[0U][i] = -GSHMEM.lightersSpeed[0U][i];
+      lightersPos[1U][i] = (HEIGHT - 1U);
+      lightersSpeed[1U][i] = -lightersSpeed[1U][i];
+      lightersSpeed[0U][i] = -lightersSpeed[0U][i];
     }
-    myLamp.drawPixelXY(GSHMEM.lightersPos[0U][i], GSHMEM.lightersPos[1U][i], CHSV(GSHMEM.lightersColor[i], 255U, 255U));
+    myLamp.drawPixelXY(lightersPos[0U][i], lightersPos[1U][i], CHSV(lightersColor[i], 255U, 255U));
   }
+  return true;
 }
 
 // ------------- светлячки со шлейфом -------------
@@ -945,51 +965,51 @@ uint16_t XY(uint8_t x, uint8_t y)
 #endif
 }
 
-void fillNoiseLED()
+void Effect3DNoise::fillNoiseLED()
 {
   uint8_t dataSmoothing = 0;
-  if (GSHMEM.speed < 50)
+  if (speed < 50)
   {
-    dataSmoothing = 200 - (GSHMEM.speed * 4);
+    dataSmoothing = 200 - (speed * 4);
   }
   for (uint8_t i = 0; i < myLamp.getminDim()*2; i++)
   {
-    int32_t ioffset = GSHMEM.scale * i;
+    int32_t ioffset = scale * i;
     for (uint8_t j = 0; j < myLamp.getmaxDim(); j++)
     {
-      int32_t joffset = GSHMEM.scale * j;
+      int32_t joffset = scale * j;
 
-      uint8_t data = inoise8(GSHMEM.x + ioffset, GSHMEM.y + joffset, GSHMEM.z);
+      uint8_t data = inoise8(x + ioffset, y + joffset, z);
 
       data = qsub8(data, 16);
       data = qadd8(data, scale8(data, 39));
 
       if (dataSmoothing)
       {
-        uint8_t olddata = GSHMEM.noise[i][j];
+        uint8_t olddata = noise[i][j];
         uint8_t newdata = scale8( olddata, dataSmoothing) + scale8( data, 256 - dataSmoothing);
         data = newdata;
       }
 
-      GSHMEM.noise[i][j] = data;
+      noise[i][j] = data;
     }
   }
-  GSHMEM.z += GSHMEM.speed;
+  z += speed;
 
   // apply slow drift to X and Y, just for visual variation.
-  GSHMEM.x += GSHMEM.speed / 8;
-  GSHMEM.y -= GSHMEM.speed / 16;
+  x += speed / 8;
+  y -= speed / 16;
 
   for (uint8_t i = 0; i < WIDTH; i++)
   {
     for (uint8_t j = 0; j < HEIGHT; j++)
     {
-      uint8_t index = GSHMEM.noise[j%(myLamp.getminDim()*2)][i];
-      uint8_t bri =   GSHMEM.noise[i%(myLamp.getminDim()*2)][j];
+      uint8_t index = noise[j%(myLamp.getminDim()*2)][i];
+      uint8_t bri =   noise[i%(myLamp.getminDim()*2)][j];
       // if this palette is a 'loop', add a slowly-changing base value
-      if ( GSHMEM.colorLoop)
+      if ( colorLoop)
       {
-        index += GSHMEM.ihue;
+        index += ihue;
       }
       // brighten up, as the color palette itself often contains the
       // light/dark dynamic range desired
@@ -1001,220 +1021,108 @@ void fillNoiseLED()
       {
         bri = dim8_raw( bri * 2);
       }
-      CRGB color = ColorFromPalette( *(CRGBPalette16 *)(GSHMEM.currentPalette), index, bri);      
+      CRGB color = ColorFromPalette( *(CRGBPalette16 *)(currentPalette), index, bri);      
       myLamp.drawPixelXY(i, j, color);                             //leds[getPixelNumber(i, j)] = color;
     }
   }
-  GSHMEM.ihue += 1;
-
-// #if defined(LAMP_DEBUG) && defined(MIC_EFFECTS)
-// EVERY_N_SECONDS(1){
-//   LOG.printf_P(PSTR("MF: %5.2f MMF: %d MP:%d MMP: %d\n"), myLamp.getMicFreq(), myLamp.getMicMapFreq(), myLamp.getMicMaxPeak(), myLamp.getMicMapMaxPeak());
-// }
-// #endif
-
+  ihue += 1;
 }
 
-void fillnoise8()
+void Effect3DNoise::fillnoise8()
 {
   for (uint8_t i = 0; i < myLamp.getminDim()*2; i++)
   {
-    int32_t ioffset = GSHMEM.scale * i;
+    int32_t ioffset = scale * i;
     for (uint8_t j = 0; j < myLamp.getmaxDim(); j++)
     {
-      int32_t joffset = GSHMEM.scale * j;
-      GSHMEM.noise[i][j] = inoise8(GSHMEM.x + ioffset, GSHMEM.y + joffset, GSHMEM.z);
+      int32_t joffset = scale * j;
+      noise[i][j] = inoise8(x + ioffset, y + joffset, z);
     }
   }
-  GSHMEM.z += GSHMEM.speed;
+  z += speed;
 }
 
-void madnessNoiseRoutine(CRGB *leds, const char *param)
-{
-  if (myLamp.isLoading())
+void Effect3DNoise::load(){
+  CRGBPalette16 *cp;
+  switch (effect)
   {
-  }
-  #ifdef MIC_EFFECTS
-  uint8_t mmf = myLamp.getMicMapFreq();
-  uint8_t mmp = myLamp.getMicMapMaxPeak();
-  GSHMEM.scale = (64UL*myLamp.effects.getScale()/255+32UL)*(mmf>0?(1.5*mmf/255.0):1);
-  GSHMEM.speed = 64UL*myLamp.effects.getSpeed()/255*(mmf<LOW_FREQ_MAP_VAL && mmp>MIN_PEAK_LEVEL?10:2.5*mmp/255.0+1);
-  #else
-  GSHMEM.scale = 64UL*myLamp.effects.getScale()/255+32UL;
-  GSHMEM.speed = 64UL*myLamp.effects.getSpeed()/255;
-  #endif
-  fillnoise8();
-  for (uint8_t i = 0; i < WIDTH; i++)
-  {
-    for (uint8_t j = 0; j < HEIGHT; j++)
-    {
-      CRGB thisColor = CHSV(GSHMEM.noise[j][i], 255, GSHMEM.noise[i][j]);
-      myLamp.drawPixelXY(i, j, thisColor);                         //leds[getPixelNumber(i, j)] = CHSV(GSHMEM.noise[j][i], 255, GSHMEM.noise[i][j]);
-    }
-  }
-  GSHMEM.ihue += 1;
-}
-
-void rainbowNoiseRoutine(CRGB *leds, const char *param)
-{
-  if (myLamp.isLoading())
-  {
-    *(CRGBPalette16 *)(GSHMEM.currentPalette) = RainbowColors_p;
-    GSHMEM.colorLoop = 1;
-  }
-  #ifdef MIC_EFFECTS
-  uint8_t mmf = myLamp.getMicMapFreq();
-  uint8_t mmp = myLamp.getMicMapMaxPeak();
-  GSHMEM.scale = (64UL*myLamp.effects.getScale()/255+32UL)*(mmf>0?(1.5*mmf/255.0):1);
-  GSHMEM.speed = 64UL*myLamp.effects.getSpeed()/255*(mmf<LOW_FREQ_MAP_VAL && mmp>MIN_PEAK_LEVEL?10:2.5*mmp/255.0+1);
-  #else
-  GSHMEM.scale = 64UL*myLamp.effects.getScale()/255+32UL;
-  GSHMEM.speed = 64UL*myLamp.effects.getSpeed()/255;
-  #endif
-  fillNoiseLED();
-}
-
-void rainbowStripeNoiseRoutine(CRGB *leds, const char *param)
-{
-  if (myLamp.isLoading())
-  {
-    *(CRGBPalette16 *)(GSHMEM.currentPalette) = RainbowStripeColors_p;
-    GSHMEM.colorLoop = 1;
-  }
-  #ifdef MIC_EFFECTS
-  uint8_t mmf = myLamp.getMicMapFreq();
-  uint8_t mmp = myLamp.getMicMapMaxPeak();
-  GSHMEM.scale = (32UL*myLamp.effects.getScale()/255+8UL)*(mmf>0?(1.5*mmf/255.0):1);
-  GSHMEM.speed = 64UL*myLamp.effects.getSpeed()/255*(mmf<LOW_FREQ_MAP_VAL && mmp>MIN_PEAK_LEVEL?10:2.5*mmp/255.0+1);
-  #else
-  GSHMEM.scale = 32UL*myLamp.effects.getScale()/255+8UL;
-  GSHMEM.speed = 64UL*myLamp.effects.getSpeed()/255;
-  #endif
-  fillNoiseLED();
-}
-
-void zebraNoiseRoutine(CRGB *leds, const char *param)
-{
-  if (myLamp.isLoading())
-  {
+  case EFF_ENUM::EFF_RAINBOW :
+    *(CRGBPalette16 *)(currentPalette) = RainbowColors_p;
+    colorLoop = 1;
+    break;
+  case EFF_ENUM::EFF_RAINBOW_STRIPE :
+    *(CRGBPalette16 *)(currentPalette) = RainbowStripeColors_p;
+    colorLoop = 1;
+    break;
+  case EFF_ENUM::EFF_ZEBRA :
     // 'black out' all 16 palette entries...
-    *(CRGBPalette16 *)(GSHMEM.currentPalette) = PartyColors_p;
-    CRGBPalette16 *cp = (CRGBPalette16 *)(GSHMEM.currentPalette);
-
+    *(CRGBPalette16 *)(currentPalette) = PartyColors_p;
+    cp = (CRGBPalette16 *)(currentPalette);
     fill_solid(*cp, 16, CRGB::Black);
     // and set every fourth one to white.
     (*cp)[0] = CRGB::White;
     (*cp)[4] = CRGB::White;
     (*cp)[8] = CRGB::White;
     (*cp)[12] = CRGB::White;
-    GSHMEM.colorLoop = 1;
+    colorLoop = 1;
+    break;
+  case EFF_ENUM::EFF_FOREST :
+    *(CRGBPalette16 *)(currentPalette) = ForestColors_p;
+    colorLoop = 0;
+    break;
+  case EFF_ENUM::EFF_OCEAN :
+    *(CRGBPalette16 *)(currentPalette) = OceanColors_p;
+    colorLoop = 0;
+     break;
+  case EFF_ENUM::EFF_PLASMA :
+    *(CRGBPalette16 *)(currentPalette) = PartyColors_p;
+    colorLoop = 1;
+    break;
+  case EFF_ENUM::EFF_CLOUDS :
+    *(CRGBPalette16 *)(currentPalette) = CloudColors_p;
+    colorLoop = 0;
+    break;
+  case EFF_ENUM::EFF_LAVA :
+    *(CRGBPalette16 *)(currentPalette) = LavaColors_p;
+    colorLoop = 0;
+    break;
+  default:
+    return;
   }
-  #ifdef MIC_EFFECTS
-  uint8_t mmf = myLamp.getMicMapFreq();
-  uint8_t mmp = myLamp.getMicMapMaxPeak();
-  GSHMEM.scale = (64UL*myLamp.effects.getScale()/255+8UL)*(mmf>0?(1.5*mmf/255.0):1);
-  GSHMEM.speed = 64UL*myLamp.effects.getSpeed()/255*(mmf<LOW_FREQ_MAP_VAL && mmp>35?10:2.5*mmp/255.0+1);
-  #else
-  GSHMEM.scale = 64UL*myLamp.effects.getScale()/255+8L;
-  GSHMEM.speed = 64UL*myLamp.effects.getSpeed()/255;
-  #endif
-  fillNoiseLED();
+
 }
 
-void forestNoiseRoutine(CRGB *leds, const char *param)
-{
-  if (myLamp.isLoading())
-  {
-    *(CRGBPalette16 *)(GSHMEM.currentPalette) = ForestColors_p;
-    GSHMEM.colorLoop = 0;
-  }
+bool Effect3DNoise::run(CRGB *ledarr, const char *opt){
   #ifdef MIC_EFFECTS
-  uint8_t mmf = myLamp.getMicMapFreq();
-  uint8_t mmp = myLamp.getMicMapMaxPeak();
-  GSHMEM.scale = (64UL*myLamp.effects.getScale()/255+32UL)*(mmf>0?(1.5*mmf/255.0):1);
-  GSHMEM.speed = 64UL*myLamp.effects.getSpeed()/255*(mmf<LOW_FREQ_MAP_VAL && mmp>MIN_PEAK_LEVEL?10:2.5*mmp/255.0+1);
+    uint8_t mmf = myLamp.getMicMapFreq();
+    uint8_t mmp = myLamp.getMicMapMaxPeak();
+    scale = (64UL*myLamp.effects.getScale()/255+32UL)*(mmf>0?(1.5*mmf/255.0):1);
+    speed = 64UL*myLamp.effects.getSpeed()/255*(mmf<LOW_FREQ_MAP_VAL && mmp>MIN_PEAK_LEVEL?10:2.5*mmp/255.0+1);
   #else
-  GSHMEM.scale = 64UL*myLamp.effects.getScale()/255+32UL;
-  GSHMEM.speed = 64UL*myLamp.effects.getSpeed()/255;
+    scale = 64UL*myLamp.effects.getScale()/255+32UL;
+    speed = 64UL*myLamp.effects.getSpeed()/255;
   #endif
-  fillNoiseLED();
+
+  switch (effect)
+  {
+  case EFF_ENUM::EFF_MADNESS :
+    fillnoise8();
+    for (uint8_t i = 0; i < WIDTH; i++)
+    {
+      for (uint8_t j = 0; j < HEIGHT; j++)
+      {
+        CRGB thisColor = CHSV(noise[j][i], 255, noise[i][j]);
+        myLamp.drawPixelXY(i, j, thisColor);                         //leds[getPixelNumber(i, j)] = CHSV(GSHMEM.noise[j][i], 255, GSHMEM.noise[i][j]);
+      }
+    }
+    ihue += 1;
+    break;
+  default:
+    fillNoiseLED();
+  }
+  return true;
 }
 
-void oceanNoiseRoutine(CRGB *leds, const char *param)
-{
-  if (myLamp.isLoading())
-  {
-    *(CRGBPalette16 *)(GSHMEM.currentPalette) = OceanColors_p;
-    GSHMEM.colorLoop = 0;
-  }
-  #ifdef MIC_EFFECTS
-  uint8_t mmf = myLamp.getMicMapFreq();
-  uint8_t mmp = myLamp.getMicMapMaxPeak();
-  GSHMEM.scale = (32UL*myLamp.effects.getScale()/255+8UL)*(mmf>0?(1.5*mmf/255.0):1);
-  GSHMEM.speed = 64UL*myLamp.effects.getSpeed()/255*(mmf<LOW_FREQ_MAP_VAL && mmp>MIN_PEAK_LEVEL?10:2.5*mmp/255.0+1);
-  #else
-  GSHMEM.scale = 32UL*myLamp.effects.getScale()/255+8UL;
-  GSHMEM.speed = 64UL*myLamp.effects.getSpeed()/255;
-  #endif
-  fillNoiseLED();
-}
-
-void plasmaNoiseRoutine(CRGB *leds, const char *param)
-{
-  if (myLamp.isLoading())
-  {
-    *(CRGBPalette16 *)(GSHMEM.currentPalette) = PartyColors_p;
-    GSHMEM.colorLoop = 1;
-  }
-  #ifdef MIC_EFFECTS
-  uint8_t mmf = myLamp.getMicMapFreq();
-  uint8_t mmp = myLamp.getMicMapMaxPeak();
-  GSHMEM.scale = (64UL*myLamp.effects.getScale()/255+32UL)*(mmf>0?(1.5*mmf/255.0):1);
-  GSHMEM.speed = 64UL*myLamp.effects.getSpeed()/255*(mmf<LOW_FREQ_MAP_VAL && mmp>MIN_PEAK_LEVEL?10:2.5*mmp/255.0+1);
-  #else
-  GSHMEM.scale = 64UL*myLamp.effects.getScale()/255+32UL;
-  GSHMEM.speed = 64UL*myLamp.effects.getSpeed()/255;
-  #endif
-  fillNoiseLED();
-}
-
-void cloudsNoiseRoutine(CRGB *leds, const char *param)
-{
-  if (myLamp.isLoading())
-  {
-    *(CRGBPalette16 *)(GSHMEM.currentPalette) = CloudColors_p;
-    GSHMEM.colorLoop = 0;
-  }
-  #ifdef MIC_EFFECTS
-  uint8_t mmf = myLamp.getMicMapFreq();
-  uint8_t mmp = myLamp.getMicMapMaxPeak();
-  GSHMEM.scale = (64UL*myLamp.effects.getScale()/255+32UL)*(mmf>0?(1.5*mmf/255.0):1);
-  GSHMEM.speed = 64UL*myLamp.effects.getSpeed()/255*(mmf<LOW_FREQ_MAP_VAL && mmp>MIN_PEAK_LEVEL?10:2.5*mmp/255.0+1);
-  #else
-  GSHMEM.scale = 64UL*myLamp.effects.getScale()/255+32UL;
-  GSHMEM.speed = 64UL*myLamp.effects.getSpeed()/255;
-  #endif
-  fillNoiseLED();
-}
-
-void lavaNoiseRoutine(CRGB *leds, const char *param)
-{
-  if (myLamp.isLoading())
-  {
-    *(CRGBPalette16 *)(GSHMEM.currentPalette) = LavaColors_p;
-    GSHMEM.colorLoop = 0;
-  }
-  #ifdef MIC_EFFECTS
-  uint8_t mmf = myLamp.getMicMapFreq();
-  uint8_t mmp = myLamp.getMicMapMaxPeak();
-  GSHMEM.scale = (64UL*myLamp.effects.getScale()/255+32UL)*(mmf>0?(1.5*mmf/255.0):1);
-  GSHMEM.speed = 64UL*myLamp.effects.getSpeed()/255*(mmf<LOW_FREQ_MAP_VAL && mmp>MIN_PEAK_LEVEL?10:2.5*mmp/255.0+1);
-  #else
-  GSHMEM.scale = 64UL*myLamp.effects.getScale()/255+32UL;
-  GSHMEM.speed = 64UL*myLamp.effects.getSpeed()/255;
-  #endif
-  fillNoiseLED();
-}
 
 // --------------------------- эффект мячики ----------------------
 //  BouncingBalls2014 is a program that lets you animate an LED strip
@@ -3217,7 +3125,35 @@ void EffectWorker::workerset(EFF_ENUM effect){
   case EFF_ENUM::EFF_SNOW :
     worker = new EffectSnow();
     break;
+  case EFF_ENUM::EFF_SPARKLES :
+    worker = new EffectSparcles();
+    break;
+  case EFF_ENUM::EFF_FIRE2012 :
+    worker = new EffectFire2012();
+    break;
+  case EFF_ENUM::EFF_SNOWSTORMSTARFALL :
+    worker = new EffectStarFall();
+    break;
+  case EFF_ENUM::EFF_LIGHTERS :
+    worker = new EffectLighters();
+    break;
+  case EFF_ENUM::EFF_MADNESS :
+  case EFF_ENUM::EFF_CLOUDS :
+  case EFF_ENUM::EFF_LAVA :
+  case EFF_ENUM::EFF_PLASMA :
+  case EFF_ENUM::EFF_RAINBOW :
+  case EFF_ENUM::EFF_RAINBOW_STRIPE :
+  case EFF_ENUM::EFF_ZEBRA :
+  case EFF_ENUM::EFF_FOREST :
+  case EFF_ENUM::EFF_OCEAN :
+    worker = new Effect3DNoise();
+    break;
   default:
     worker = new EffectCalc();
   }
+
+  worker->init(effect, myLamp.effects.getBrightness(), myLamp.effects.getSpeed(), myLamp.effects.getScale());
+
 }
+
+void stubRoutine(CRGB *, const char *){}

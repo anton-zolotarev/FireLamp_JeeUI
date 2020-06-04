@@ -45,6 +45,7 @@ JeeUI2 lib used under MIT License Copyright (c) 2019 Marsel Akhkamov
 #include <FS.h>
 #include "effects_types.h"
 
+#define DEF_SLIDER 127
 
 typedef enum _EFF_ENUM {
 EFF_NONE = (0U),                              // Специальный служебный эффект, не комментировать и индекс не менять константу!
@@ -101,21 +102,25 @@ EFF_TIME = (98)                               // Часы (служебный, �
 
 
 
-
-void sparklesRoutine(CRGB*, const char*);
+/*
+ * заглушка для "старых" эффектов
+ */
+void stubRoutine(CRGB *, const char *);
+//void sparklesRoutine(CRGB*, const char*);
 void fireRoutine(CRGB*, const char*);
 void whiteColorStripeRoutine(CRGB*, const char*);
-void fire2012WithPalette(CRGB*, const char*);
+//void fire2012WithPalette(CRGB*, const char*);
 void pulseRoutine(CRGB*, const char*);
 void rainbowDiagonalRoutine(CRGB*, const char*);
 void colorsRoutine(CRGB*, const char*);
 // void matrixRoutine(CRGB*, const char*);
 // void snowRoutine(CRGB*, const char*);
-void snowStormStarfallRoutine(CRGB*, const char*);
-void lightersRoutine(CRGB*, const char*);
+//void snowStormStarfallRoutine(CRGB*, const char*);
+//void lightersRoutine(CRGB*, const char*);
 void ballsRoutine(CRGB*, const char*);
 void lightBallsRoutine(CRGB*, const char*);
 void ballRoutine(CRGB*, const char*);
+/*
 void madnessNoiseRoutine(CRGB*, const char*);
 void rainbowNoiseRoutine(CRGB*, const char*);
 void rainbowStripeNoiseRoutine(CRGB*, const char*);
@@ -125,6 +130,7 @@ void oceanNoiseRoutine(CRGB*, const char*);
 void plasmaNoiseRoutine(CRGB*, const char*);
 void cloudsNoiseRoutine(CRGB*, const char*);
 void lavaNoiseRoutine(CRGB*, const char*);
+*/
 void BBallsRoutine(CRGB*, const char*);
 void Sinusoid3Routine(CRGB*, const char*);
 void metaBallsRoutine(CRGB*, const char*);
@@ -265,29 +271,33 @@ static EFFECT _EFFECTS_ARR[] = {
 
     {true, true, 127, 127, 127, EFF_COLORS, T_COLORS, colorsRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_RAINBOW_2D, T_RAINBOW_2D, rainbowDiagonalRoutine, nullptr},
-    {true, true, 127, 127, 127, EFF_SPARKLES, T_SPARKLES, sparklesRoutine, nullptr},
+//    {true, true, 127, 127, 127, EFF_SPARKLES, T_SPARKLES, sparklesRoutine, nullptr},
+    {true, true, 127, 127, 127, EFF_SPARKLES, T_SPARKLES, stubRoutine, nullptr},
 //    {true, true, 127, 127, 127, EFF_SNOW, T_SNOW, snowRoutine, nullptr},    
-    {true, true, 127, 127, 127, EFF_SNOW, T_SNOW, colorsRoutine, nullptr},
-    {true, true, 127, 127, 127, EFF_SNOWSTORMSTARFALL, T_SNOWSTORMSTARFALL, snowStormStarfallRoutine, nullptr},
+    {true, true, 127, 127, 127, EFF_SNOW, T_SNOW, stubRoutine, nullptr},
+//    {true, true, 127, 127, 127, EFF_SNOWSTORMSTARFALL, T_SNOWSTORMSTARFALL, snowStormStarfallRoutine, nullptr},
+    {true, true, 127, 127, 127, EFF_SNOWSTORMSTARFALL, T_SNOWSTORMSTARFALL, stubRoutine, nullptr},
 //    {true, true, 127, 127, 127, EFF_MATRIX, T_MATRIX, matrixRoutine, nullptr},
-    {true, true, 127, 127, 127, EFF_MATRIX, T_MATRIX, colorsRoutine, nullptr},
-    {true, true, 127, 127, 127, EFF_LIGHTERS, T_LIGHTERS, lightersRoutine, nullptr},
+    {true, true, 127, 127, 127, EFF_MATRIX, T_MATRIX, stubRoutine, nullptr},
+//    {true, true, 127, 127, 127, EFF_LIGHTERS, T_LIGHTERS, lightersRoutine, nullptr},
+    {true, true, 127, 127, 127, EFF_LIGHTERS, T_LIGHTERS, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_LIGHTER_TRACES, T_LIGHTER_TRACES, ballsRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_CUBE, T_CUBE, ballRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_PULSE, T_PULSE, pulseRoutine, nullptr},
-    {true, true, 127, 127, 127, EFF_EVERYTHINGFALL, T_EVERYTHINGFALL, fire2012WithPalette, nullptr},
+//    {true, true, 127, 127, 127, EFF_EVERYTHINGFALL, T_EVERYTHINGFALL, fire2012WithPalette, nullptr},
+    {true, true, 127, 127, 127, EFF_EVERYTHINGFALL, T_EVERYTHINGFALL, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_FIRE, T_FIRE, fireRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_PAINTBALL, T_PAINTBALL, lightBallsRoutine, nullptr},
 
-    {true, true, 127, 127, 127, EFF_MADNESS, T_MADNESS, madnessNoiseRoutine, nullptr},
-    {true, true, 127, 127, 127, EFF_CLOUDS, T_CLOUDS, cloudsNoiseRoutine, nullptr},
-    {true, true, 127, 127, 127, EFF_LAVA, T_LAVA, lavaNoiseRoutine, nullptr},
-    {true, true, 127, 127, 127, EFF_PLASMA, T_PLASMA, plasmaNoiseRoutine, nullptr},
-    {true, true, 127, 127, 127, EFF_RAINBOW, T_RAINBOW, rainbowNoiseRoutine, nullptr},
-    {true, true, 127, 127, 127, EFF_RAINBOW_STRIPE, T_RAINBOW_STRIPE, rainbowStripeNoiseRoutine, nullptr},
-    {true, true, 127, 127, 127, EFF_ZEBRA, T_ZEBRA, zebraNoiseRoutine, nullptr},
-    {true, true, 127, 127, 127, EFF_FOREST, T_FOREST, forestNoiseRoutine, nullptr},
-    {true, true, 127, 127, 127, EFF_OCEAN, T_OCEAN, oceanNoiseRoutine, nullptr},
+    {true, true, 127, 127, 127, EFF_MADNESS, T_MADNESS, stubRoutine, nullptr},
+    {true, true, 127, 127, 127, EFF_CLOUDS, T_CLOUDS, stubRoutine, nullptr},
+    {true, true, 127, 127, 127, EFF_LAVA, T_LAVA, stubRoutine, nullptr},
+    {true, true, 127, 127, 127, EFF_PLASMA, T_PLASMA, stubRoutine, nullptr},
+    {true, true, 127, 127, 127, EFF_RAINBOW, T_RAINBOW, stubRoutine, nullptr},
+    {true, true, 127, 127, 127, EFF_RAINBOW_STRIPE, T_RAINBOW_STRIPE, stubRoutine, nullptr},
+    {true, true, 127, 127, 127, EFF_ZEBRA, T_ZEBRA, stubRoutine, nullptr},
+    {true, true, 127, 127, 127, EFF_FOREST, T_FOREST, stubRoutine, nullptr},
+    {true, true, 127, 127, 127, EFF_OCEAN, T_OCEAN, stubRoutine, nullptr},
 
     {true, true, 127, 127, 127, EFF_BBALS, T_BBALS, BBallsRoutine, nullptr}, 
     {true, true, 127, 127, 127, EFF_SINUSOID3, T_SINUSOID3, Sinusoid3Routine, nullptr},
@@ -303,7 +313,8 @@ static EFFECT _EFFECTS_ARR[] = {
     {true, true, 127, 127, 127, EFF_TWINKLES, T_TWINKLES, twinklesRoutine, ((char *)_R255)}, // очень хреновое приведение типов, но дальше это разрулим :)
     {true, true, 127, 127, 127, EFF_RADAR, T_RADAR, radarRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_WAVES, T_WAVES, wavesRoutine, nullptr},
-    {true, true, 127, 127, 127, EFF_FIRE2012, T_FIRE2012, fire2012Routine, nullptr},
+//    {true, true, 127, 127, 127, EFF_FIRE2012, T_FIRE2012, fire2012Routine, nullptr},
+    {true, true, 127, 127, 127, EFF_FIRE2012, T_FIRE2012, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_RAIN, T_RAIN, simpleRainRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_COLORRAIN, T_COLORRAIN, coloredRainRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_STORMYRAIN, T_STORMYRAIN, stormyRainRoutine, nullptr},
@@ -349,18 +360,18 @@ public:
         struct {
             //-- 3D Noise эффектцы --------------
             uint8_t ihue;
-            uint8_t colorLoop;
+            //uint8_t colorLoop;
             uint16_t speed;                                        // speed is set dynamically once we've started up
             uint16_t scale;                                        // scale is set dynamically once we've started up
-            uint16_t x;
-            uint16_t y;
-            uint16_t z;
-            #if (WIDTH > HEIGHT)
-            uint8_t noise[2*HEIGHT][WIDTH];
-            #else
-            uint8_t noise[2*WIDTH][HEIGHT];
-            #endif
-            char currentPalette[sizeof(CRGBPalette16)];
+            //uint16_t x;
+            //uint16_t y;
+            //uint16_t z;
+            //#if (WIDTH > HEIGHT)
+            //uint8_t noise[2*HEIGHT][WIDTH];
+            //#else
+            //uint8_t noise[2*WIDTH][HEIGHT];
+            //#endif
+            //char currentPalette[sizeof(CRGBPalette16)];
 		};
         struct {
             int16_t ballColor;
@@ -371,12 +382,14 @@ public:
             int8_t vector[BALLS_AMOUNT][2U];
             float coord[BALLS_AMOUNT][2U];
 		};
+        /*
         struct {
             uint16_t lightersIdx;
             int8_t lightersSpeed[2U][LIGHTERS_AM];
             uint8_t lightersColor[LIGHTERS_AM];
             float lightersPos[2U][LIGHTERS_AM];
 		};
+        */
         struct { // радуги
             uint8_t hue;
 		};
@@ -384,10 +397,12 @@ public:
             uint8_t pulse_hue;
             uint8_t pulse_step;
 		};
+        /*
         struct {
             // Array of temperature readings at each simulation cell
             byte heat[WIDTH][HEIGHT];
 		};
+        */
         struct { // Огонь
             uint8_t pcnt;
             uint8_t shiftHue[HEIGHT];                              // массив дороожки горизонтального смещения пламени (hueMask)
@@ -485,15 +500,24 @@ public:
 };
 
 /*
- * Null Calc effect does nothing actually
+ * Basic Effect Calc class, does nothing actually
  */
 class EffectCalc {
 private:
-    uint32_t _lastrun;
 
 public:
-    EffectCalc(){_lastrun=millis();}
-    virtual void init(){}
+    uint32_t lastrun=0;
+    EFF_ENUM effect;
+    byte brightness;
+    byte speed;
+    byte scale;
+    uint8_t mmf=0;
+    uint8_t mmp=0;
+
+    //общий конструктор, дергает инит (вместо myLamp.isLoading())
+    EffectCalc(){}
+    virtual void init(EFF_ENUM _eff, byte _brt, byte _spd, byte _scl);
+    virtual void load();   // вызывается автоматом из init(), можно заменять на процедуру первой загрузки эффекта вместо флага load
     virtual bool run(CRGB* ledarr, const char *opt=nullptr);
     bool dryrun();
     virtual ~EffectCalc();
@@ -512,6 +536,71 @@ private:
     bool snowRoutine(CRGB *leds, const char *param);
 
 public:
+    bool run(CRGB *ledarr, const char *opt=nullptr) override;
+};
+
+class EffectSparcles : public EffectCalc {
+private:
+    bool sparklesRoutine(CRGB *leds, const char *param);
+
+public:
+    bool run(CRGB *ledarr, const char *opt=nullptr) override;
+};
+
+class EffectFire2012 : public EffectCalc {
+private:
+    byte heat[WIDTH][HEIGHT];
+    bool fire2012WithPalette(CRGB *leds, const char *param);
+
+public:
+    bool run(CRGB *ledarr, const char *opt=nullptr) override;
+};
+
+class EffectStarFall : public EffectCalc {
+private:
+    bool snowStormStarfallRoutine(CRGB *leds, const char *param);
+
+public:
+    void load() override {FastLED.clear();}
+    bool run(CRGB *ledarr, const char *opt=nullptr) override;
+};
+
+class EffectLighters : public EffectCalc {
+private:
+    uint16_t lightersIdx;
+    int8_t lightersSpeed[2U][LIGHTERS_AM];
+    uint8_t lightersColor[LIGHTERS_AM];
+    float lightersPos[2U][LIGHTERS_AM];
+
+    bool lightersRoutine(CRGB *leds, const char *param);
+
+public:
+    void load() override;
+    bool run(CRGB *ledarr, const char *opt=nullptr) override;
+};
+
+class Effect3DNoise : public EffectCalc {
+private:
+//    uint16_t XY(uint8_t x, uint8_t y);
+    void fillNoiseLED();
+    void fillnoise8();
+
+    uint8_t ihue;
+    uint8_t colorLoop;
+    uint16_t speed;                                        // speed is set dynamically once we've started up
+    uint16_t scale;                                        // scale is set dynamically once we've started up
+    uint16_t x;
+    uint16_t y;
+    uint16_t z;
+    #if (WIDTH > HEIGHT)
+    uint8_t noise[2*HEIGHT][WIDTH];
+    #else
+    uint8_t noise[2*WIDTH][HEIGHT];
+    #endif
+    char currentPalette[sizeof(CRGBPalette16)];
+
+public:
+    void load() override;
     bool run(CRGB *ledarr, const char *opt=nullptr) override;
 };
 

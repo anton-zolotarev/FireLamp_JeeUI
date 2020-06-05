@@ -37,42 +37,20 @@ JeeUI2 lib used under MIT License Copyright (c) 2019 Marsel Akhkamov
 
 #include "main.h"
 
-extern const TProgmemRGBPalette16 WaterfallColors_p FL_PROGMEM = {
-  CRGB::Black,
-  CRGB::DarkSlateGray,
-  CRGB::DimGray,
-  CRGB::LightSlateGray,
 
-  CRGB::DimGray,
-  CRGB::DarkSlateGray,
-  CRGB::Silver,
-  CRGB::DarkCyan,
+  const TProgmemRGBPalette16 *firePalettes[] = {
+    &HeatColors2_p,
+    &WoodFireColors_p,
+    &NormalFire_p,
+    &NormalFire2_p,
+    &LithiumFireColors_p,
+    &SodiumFireColors_p,
+    &CopperFireColors_p,
+    &AlcoholFireColors_p,
+    &RubidiumFireColors_p,
+    &PotassiumFireColors_p};
 
-  CRGB::Lavender,
-  CRGB::Silver,
-  CRGB::Azure,
-  CRGB::LightGrey,
 
-  CRGB::GhostWhite,
-  CRGB::Silver,
-  CRGB::White,
-  CRGB::RoyalBlue
-};
-
-extern const TProgmemRGBPalette16 HeatColors2_p FL_PROGMEM = {    0x000000,
-    0x330000, 0x660000, 0x990000, 0xCC0000, 0xFF0000,
-    0xFF3300, 0xFF6600, 0xFF9900, 0xFFCC00, 0xFFFF00,
-    0xFFFF33, 0xFFFF66, 0xFFFF99, 0xFFFFCC, 0xFFFFFF};
-
-extern const TProgmemRGBPalette16 WoodFireColors_p FL_PROGMEM = {CRGB::Black, CRGB::OrangeRed, CRGB::Orange, CRGB::Gold};             //* Orange
-extern const TProgmemRGBPalette16 NormalFire_p FL_PROGMEM = {CRGB::Black, CRGB::Red, 0xff3c00, 0xff7800};                             // пытаюсь сделать что-то более приличное
-extern const TProgmemRGBPalette16 NormalFire2_p FL_PROGMEM = {CRGB::Black, CRGB::FireBrick, 0xff3c00, 0xff7800};                      // пытаюсь сделать что-то более приличное
-extern const TProgmemRGBPalette16 SodiumFireColors_p FL_PROGMEM = {CRGB::Black, CRGB::Orange, CRGB::Gold, CRGB::Goldenrod};           //* Yellow
-extern const TProgmemRGBPalette16 CopperFireColors_p FL_PROGMEM = {CRGB::Black, CRGB::Green, CRGB::GreenYellow, CRGB::LimeGreen};     //* Green
-extern const TProgmemRGBPalette16 AlcoholFireColors_p FL_PROGMEM = {CRGB::Black, CRGB::Blue, CRGB::DeepSkyBlue, CRGB::LightSkyBlue};  //* Blue
-extern const TProgmemRGBPalette16 RubidiumFireColors_p FL_PROGMEM = {CRGB::Black, CRGB::Indigo, CRGB::Indigo, CRGB::DarkBlue};        //* Indigo
-extern const TProgmemRGBPalette16 PotassiumFireColors_p FL_PROGMEM = {CRGB::Black, CRGB::Indigo, CRGB::MediumPurple, CRGB::DeepPink}; //* Violet
-extern const TProgmemRGBPalette16 LithiumFireColors_p FL_PROGMEM = {CRGB::Black, CRGB::FireBrick, CRGB::Pink, CRGB::DeepPink};        //* Red
 
 
 void EffectCalc::init(EFF_ENUM _eff, byte _brt, byte _spd, byte _scl){
@@ -248,7 +226,7 @@ void whiteColorStripeRoutine(CRGB *leds, const char *param)
 }
 
 // ============= водо/огне/лава/радуга/хренопад ===============
-bool EffectFire2012::run(CRGB *ledarr, const char *opt){
+bool EffectEverythingFall::run(CRGB *ledarr, const char *opt){
   if (dryrun())
     return false;
   return fire2012WithPalette(*&ledarr, &*opt);
@@ -258,7 +236,7 @@ bool EffectFire2012::run(CRGB *ledarr, const char *opt){
 // Higher chance = more roaring fire.  Lower chance = more flickery fire.
 // Default 120, suggested range 50-200.
 #define SPARKINGNEW 80U // 50 // 30 // 120 // 90 // 60
-bool EffectFire2012::fire2012WithPalette(CRGB*leds, const char *param) {
+bool EffectEverythingFall::fire2012WithPalette(CRGB*leds, const char *param) {
   const TProgmemRGBPalette16 *palette_arr[] = {&PartyColors_p, &OceanColors_p, &LavaColors_p, &HeatColors_p, &WaterfallColors_p, &CloudColors_p, &ForestColors_p, &RainbowColors_p, &RainbowStripeColors_p};
   const TProgmemRGBPalette16 *curPalette = palette_arr[(int)((float)myLamp.effects.getScale()/255.1*((sizeof(palette_arr)/sizeof(TProgmemRGBPalette16 *))-1))];
 
@@ -968,16 +946,16 @@ uint16_t XY(uint8_t x, uint8_t y)
 void Effect3DNoise::fillNoiseLED()
 {
   uint8_t dataSmoothing = 0;
-  if (speed < 50)
+  if (_speed < 50)
   {
-    dataSmoothing = 200 - (speed * 4);
+    dataSmoothing = 200 - (_speed * 4);
   }
   for (uint8_t i = 0; i < myLamp.getminDim()*2; i++)
   {
-    int32_t ioffset = scale * i;
+    int32_t ioffset = _scale * i;
     for (uint8_t j = 0; j < myLamp.getmaxDim(); j++)
     {
-      int32_t joffset = scale * j;
+      int32_t joffset = _scale * j;
 
       uint8_t data = inoise8(x + ioffset, y + joffset, z);
 
@@ -994,11 +972,11 @@ void Effect3DNoise::fillNoiseLED()
       noise[i][j] = data;
     }
   }
-  z += speed;
+  z += _speed;
 
   // apply slow drift to X and Y, just for visual variation.
-  x += speed / 8;
-  y -= speed / 16;
+  x += _speed / 8;
+  y -= _speed / 16;
 
   for (uint8_t i = 0; i < WIDTH; i++)
   {
@@ -1032,14 +1010,14 @@ void Effect3DNoise::fillnoise8()
 {
   for (uint8_t i = 0; i < myLamp.getminDim()*2; i++)
   {
-    int32_t ioffset = scale * i;
+    int32_t ioffset = _scale * i;
     for (uint8_t j = 0; j < myLamp.getmaxDim(); j++)
     {
-      int32_t joffset = scale * j;
+      int32_t joffset = _scale * j;
       noise[i][j] = inoise8(x + ioffset, y + joffset, z);
     }
   }
-  z += speed;
+  z += _speed;
 }
 
 void Effect3DNoise::load(){
@@ -1096,11 +1074,11 @@ bool Effect3DNoise::run(CRGB *ledarr, const char *opt){
   #ifdef MIC_EFFECTS
     uint8_t mmf = myLamp.getMicMapFreq();
     uint8_t mmp = myLamp.getMicMapMaxPeak();
-    scale = (64UL*myLamp.effects.getScale()/255+32UL)*(mmf>0?(1.5*mmf/255.0):1);
-    speed = 64UL*myLamp.effects.getSpeed()/255*(mmf<LOW_FREQ_MAP_VAL && mmp>MIN_PEAK_LEVEL?10:2.5*mmp/255.0+1);
+    _scale = (NOISE_SCALE_AMP*myLamp.effects.getScale()/255+NOISE_SCALE_ADD)*(mmf>0?(1.5*mmf/255.0):1);
+    _speed = NOISE_SCALE_AMP*myLamp.effects.getSpeed()/255*(mmf<LOW_FREQ_MAP_VAL && mmp>MIN_PEAK_LEVEL?10:2.5*mmp/255.0+1);
   #else
-    scale = 64UL*myLamp.effects.getScale()/255+32UL;
-    speed = 64UL*myLamp.effects.getSpeed()/255;
+    _scale = NOISE_SCALE_AMP*myLamp.effects.getScale()/255+NOISE_SCALE_ADD;
+    _speed = NOISE_SCALE_AMP*myLamp.effects.getSpeed()/255;
   #endif
 
   switch (effect)
@@ -2143,38 +2121,31 @@ uint8_t wrapY(int8_t y)
   return (y + HEIGHT) % HEIGHT;
 }
 
-void fire2012Routine(CRGB *leds, const char *param)
-{
-const TProgmemRGBPalette16 *firePalettes[] = {
-    &HeatColors2_p,
-    &WoodFireColors_p,
-    &NormalFire_p,
-    &NormalFire2_p,
-    &LithiumFireColors_p,
-    &SodiumFireColors_p,
-    &CopperFireColors_p,
-    &AlcoholFireColors_p,
-    &RubidiumFireColors_p,
-    &PotassiumFireColors_p};
-
-  const TProgmemRGBPalette16 *curPalette = firePalettes[(int)((float)myLamp.effects.getScale()/255.1*((sizeof(firePalettes)/sizeof(TProgmemRGBPalette16 *))-1))];
-  
-#if HEIGHT / 6 > 6
-#define FIRE_BASE 6
-#else
-#define FIRE_BASE HEIGHT / 6 + 1
-#endif
-  // COOLING: How much does the air cool as it rises?
-  // Less cooling = taller flames.  More cooling = shorter flames.
-  uint8_t cooling = 70;
-  // SPARKING: What chance (out of 255) is there that a new spark will be lit?
-  // Higher chance = more roaring fire.  Lower chance = more flickery fire.
-  uint8_t sparking = 130;
-  // SMOOTHING; How much blending should be done between frames
-  // Lower = more blending and smoother flames. Higher = less blending and flickery flames
-  const uint8_t fireSmoothing = 80*2.0*myLamp.effects.getSpeed()/255.0+10;
+/*
+ * Эффект "Огонь 2012"
+ */
+void EffectFire2012::load(){
   // Add entropy to random number generator; we use a lot of it.
   random16_add_entropy(random(256));
+}
+
+bool EffectFire2012::run(CRGB *ledarr, const char *opt){
+  return fire2012Routine(*&ledarr, &*opt);
+}
+
+bool EffectFire2012::fire2012Routine(CRGB *ledarr, const char *opt)
+{
+#if HEIGHT / 6 > 6
+  #define FIRE_BASE 6
+#else
+  #define FIRE_BASE HEIGHT / 6 + 1
+#endif
+
+  curPalette = firePalettes[(int)((float)myLamp.effects.getScale()/255.1*((sizeof(firePalettes)/sizeof(TProgmemRGBPalette16 *))-1))];
+
+  // SMOOTHING; How much blending should be done between frames
+  // Lower = more blending and smoother flames. Higher = less blending and flickery flames
+  uint8_t fireSmoothing = 80*2.0*myLamp.effects.getSpeed()/255.0+10;
 
   // Loop for each column individually
   for (uint8_t x = 0; x < WIDTH; x++)
@@ -2182,20 +2153,20 @@ const TProgmemRGBPalette16 *firePalettes[] = {
     // Step 1.  Cool down every cell a little
     for (uint8_t i = 0; i < HEIGHT; i++)
     {
-      GSHMEM.noise3d[0][x][i] = qsub8(GSHMEM.noise3d[0][x][i], random(0, ((cooling * 10) / HEIGHT) + 2));
+      noise3d[0][x][i] = qsub8(noise3d[0][x][i], random(0, ((cooling * 10) / HEIGHT) + 2));
     }
 
     // Step 2.  Heat from each cell drifts 'up' and diffuses a little
     for (uint8_t k = HEIGHT; k > 1; k--)
     {
-      GSHMEM.noise3d[0][x][wrapY(k)] = (GSHMEM.noise3d[0][x][k - 1] + GSHMEM.noise3d[0][x][wrapY(k - 2)] + GSHMEM.noise3d[0][x][wrapY(k - 2)]) / 3;
+      noise3d[0][x][wrapY(k)] = (noise3d[0][x][k - 1] + noise3d[0][x][wrapY(k - 2)] + noise3d[0][x][wrapY(k - 2)]) / 3;
     }
 
     // Step 3.  Randomly ignite new 'sparks' of heat near the bottom
     if (random(255) < sparking)
     {
       int j = random(FIRE_BASE);
-      GSHMEM.noise3d[0][x][j] = qadd8(GSHMEM.noise3d[0][x][j], random(160, 255));
+      noise3d[0][x][j] = qadd8(noise3d[0][x][j], random(160, 255));
     }
 
     // Step 4.  Map from heat cells to LED colors
@@ -2203,11 +2174,12 @@ const TProgmemRGBPalette16 *firePalettes[] = {
     {
       // Blend new data with previous frame. Average data between neighbouring pixels
       if(curPalette!=firePalettes[0]){
-        nblend(myLamp.getUnsafeLedsArray()[myLamp.getPixelNumber(x, y)], ColorFromPalette(HeatColors2_p, ((GSHMEM.noise3d[0][x][y] * 0.7) + (GSHMEM.noise3d[0][wrapX(x + 1)][y] * 0.3))), fireSmoothing);
+        nblend(myLamp.getUnsafeLedsArray()[myLamp.getPixelNumber(x, y)], ColorFromPalette(HeatColors2_p, ((noise3d[0][x][y] * 0.7) + (noise3d[0][wrapX(x + 1)][y] * 0.3))), fireSmoothing);
       }
-      nblend(myLamp.getUnsafeLedsArray()[myLamp.getPixelNumber(x, y)], ColorFromPalette(*curPalette, ((GSHMEM.noise3d[0][x][y] * 0.7) + (GSHMEM.noise3d[0][wrapX(x + 1)][y] * 0.3))), fireSmoothing);
+      nblend(myLamp.getUnsafeLedsArray()[myLamp.getPixelNumber(x, y)], ColorFromPalette(*curPalette, ((noise3d[0][x][y] * 0.7) + (noise3d[0][wrapX(x + 1)][y] * 0.3))), fireSmoothing);
     }
   }
+  return true;
 }
 
 // ============= RAINS/LEDS/THUNDERS IN THE CAN /  ОСАДКИ/ТУЧКА/ГРОЗА В БАНКЕ ===============
@@ -3127,6 +3099,9 @@ void EffectWorker::workerset(EFF_ENUM effect){
     break;
   case EFF_ENUM::EFF_SPARKLES :
     worker = new EffectSparcles();
+    break;
+  case EFF_ENUM::EFF_EVERYTHINGFALL :
+    worker = new EffectEverythingFall();
     break;
   case EFF_ENUM::EFF_FIRE2012 :
     worker = new EffectFire2012();

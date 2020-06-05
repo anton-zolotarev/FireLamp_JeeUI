@@ -62,6 +62,49 @@ JeeUI2 lib used under MIT License Copyright (c) 2019 Marsel Akhkamov
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+static const TProgmemRGBPalette16 WaterfallColors_p FL_PROGMEM = {
+  CRGB::Black,
+  CRGB::DarkSlateGray,
+  CRGB::DimGray,
+  CRGB::LightSlateGray,
+
+  CRGB::DimGray,
+  CRGB::DarkSlateGray,
+  CRGB::Silver,
+  CRGB::DarkCyan,
+
+  CRGB::Lavender,
+  CRGB::Silver,
+  CRGB::Azure,
+  CRGB::LightGrey,
+
+  CRGB::GhostWhite,
+  CRGB::Silver,
+  CRGB::White,
+  CRGB::RoyalBlue
+};
+
+static const TProgmemRGBPalette16 HeatColors2_p FL_PROGMEM = {    0x000000,
+    0x330000, 0x660000, 0x990000, 0xCC0000, 0xFF0000,
+    0xFF3300, 0xFF6600, 0xFF9900, 0xFFCC00, 0xFFFF00,
+    0xFFFF33, 0xFFFF66, 0xFFFF99, 0xFFFFCC, 0xFFFFFF};
+
+static const TProgmemRGBPalette16 WoodFireColors_p FL_PROGMEM = {CRGB::Black, CRGB::OrangeRed, CRGB::Orange, CRGB::Gold};             //* Orange
+static const TProgmemRGBPalette16 NormalFire_p FL_PROGMEM = {CRGB::Black, CRGB::Red, 0xff3c00, 0xff7800};                             // пытаюсь сделать что-то более приличное
+static const TProgmemRGBPalette16 NormalFire2_p FL_PROGMEM = {CRGB::Black, CRGB::FireBrick, 0xff3c00, 0xff7800};                      // пытаюсь сделать что-то более приличное
+static const TProgmemRGBPalette16 SodiumFireColors_p FL_PROGMEM = {CRGB::Black, CRGB::Orange, CRGB::Gold, CRGB::Goldenrod};           //* Yellow
+static const TProgmemRGBPalette16 CopperFireColors_p FL_PROGMEM = {CRGB::Black, CRGB::Green, CRGB::GreenYellow, CRGB::LimeGreen};     //* Green
+static const TProgmemRGBPalette16 AlcoholFireColors_p FL_PROGMEM = {CRGB::Black, CRGB::Blue, CRGB::DeepSkyBlue, CRGB::LightSkyBlue};  //* Blue
+static const TProgmemRGBPalette16 RubidiumFireColors_p FL_PROGMEM = {CRGB::Black, CRGB::Indigo, CRGB::Indigo, CRGB::DarkBlue};        //* Indigo
+static const TProgmemRGBPalette16 PotassiumFireColors_p FL_PROGMEM = {CRGB::Black, CRGB::Indigo, CRGB::MediumPurple, CRGB::DeepPink}; //* Violet
+static const TProgmemRGBPalette16 LithiumFireColors_p FL_PROGMEM = {CRGB::Black, CRGB::FireBrick, CRGB::Pink, CRGB::DeepPink};        //* Redstatic
+
+// ==== Константы для эффектов ====
+
+// 3D Noise
+#define NOISE_SCALE_AMP  (58UL)    // амплификатор шкалы
+#define NOISE_SCALE_ADD  (8UL)    // корректор шкалы
+
 template <class T>
 class Vector2 {
 public:

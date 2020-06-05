@@ -41,7 +41,6 @@ JeeUI2 lib used under MIT License Copyright (c) 2019 Marsel Akhkamov
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <string.h>
-//#include <FastLed.h>
 #include <FS.h>
 #include "effects_types.h"
 
@@ -145,7 +144,7 @@ void incrementalDriftRoutine2(CRGB*, const char*);
 void twinklesRoutine(CRGB*, const char*);
 void radarRoutine(CRGB*, const char*);
 void wavesRoutine(CRGB*, const char*);
-void fire2012Routine(CRGB*, const char*);
+//void fire2012Routine(CRGB*, const char*);
 void coloredRainRoutine(CRGB*, const char*);
 void simpleRainRoutine(CRGB*, const char*);
 void stormyRainRoutine(CRGB*, const char*);
@@ -547,12 +546,44 @@ public:
     bool run(CRGB *ledarr, const char *opt=nullptr) override;
 };
 
-class EffectFire2012 : public EffectCalc {
+class EffectEverythingFall : public EffectCalc {
 private:
     byte heat[WIDTH][HEIGHT];
     bool fire2012WithPalette(CRGB *leds, const char *param);
 
 public:
+    bool run(CRGB *ledarr, const char *opt=nullptr) override;
+};
+
+class EffectFire2012 : public EffectCalc {
+private:
+  const TProgmemRGBPalette16 *firePalettes[10] = {
+    &HeatColors2_p,
+    &WoodFireColors_p,
+    &NormalFire_p,
+    &NormalFire2_p,
+    &LithiumFireColors_p,
+    &SodiumFireColors_p,
+    &CopperFireColors_p,
+    &AlcoholFireColors_p,
+    &RubidiumFireColors_p,
+    &PotassiumFireColors_p};
+
+  const TProgmemRGBPalette16 *curPalette;
+
+  // COOLING: How much does the air cool as it rises?
+  // Less cooling = taller flames.  More cooling = shorter flames.
+  uint8_t cooling = 70;
+  // SPARKING: What chance (out of 255) is there that a new spark will be lit?
+  // Higher chance = more roaring fire.  Lower chance = more flickery fire.
+  uint8_t sparking = 130;
+
+  uint8_t noise3d[NUM_LAYERS][WIDTH][HEIGHT];
+
+  bool fire2012Routine(CRGB *leds, const char *param);
+
+public:
+    void load() override;
     bool run(CRGB *ledarr, const char *opt=nullptr) override;
 };
 
@@ -587,8 +618,8 @@ private:
 
     uint8_t ihue;
     uint8_t colorLoop;
-    uint16_t speed;                                        // speed is set dynamically once we've started up
-    uint16_t scale;                                        // scale is set dynamically once we've started up
+    uint16_t _speed;             // speed is set dynamically once we've started up
+    uint16_t _scale;             // scale is set dynamically once we've started up
     uint16_t x;
     uint16_t y;
     uint16_t z;

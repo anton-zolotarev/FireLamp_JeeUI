@@ -498,28 +498,91 @@ public:
 	};
 };
 
-/*
- * Basic Effect Calc class, does nothing actually
- */
+//! Basic Effect Calc class
+/**
+ * Базовый класс эффекта с основными переменными и методами общими для всех эффектов
+ * методы переопределяются каждым эффектом по необходимости 
+*/
 class EffectCalc {
 private:
 
 public:
-    uint32_t lastrun=0;
-    EFF_ENUM effect;
+    bool active=0;          /** работает ли воркер, пока нужно чтобы пропускать холостые кадры */
+    uint32_t lastrun=0;     /**< счетчик времени для эффектов с "задержкой" */
+    EFF_ENUM effect;        /**< энумератор эффекта */
     byte brightness;
     byte speed;
     byte scale;
     uint8_t mmf=0;
     uint8_t mmp=0;
 
-    //общий конструктор, дергает инит (вместо myLamp.isLoading())
     EffectCalc(){}
+
+    /**
+     * intit метод, вызывается отдельно после создания экземпляра эффекта для установки базовых переменных
+     * @param _eff - энумератор эффекта, может пригодится для мультиэффектов типа 3DNoise если эффект
+     * может использовать разные функции для различных версий эффекта
+     * @param _brt - яркость, прилетающая из "настроек" эффекта, эффект может менять свою яркость позже независимо от указок "сверху"
+     * @param _spd - скорость, прилетающая из "настроек" эффекта, эффект может менять свою скорость позже независимо от указок "сверху"
+     * @param _scl - шкала, прилетающая из "настроек" эффекта, эффект может менять свою шкалу позже независимо от указок "сверху"
+     *  
+    */
     virtual void init(EFF_ENUM _eff, byte _brt, byte _spd, byte _scl);
-    virtual void load();   // вызывается автоматом из init(), можно заменять на процедуру первой загрузки эффекта вместо флага load
+
+    /**
+     * load метод, по умолчанию пустой. Вызывается автоматом из init(), в дочернем классе можно заменять на процедуру первой загрузки эффекта (вместо того что выполняется под флагом load)
+     * 
+    */
+    virtual void load();
+
+    /**
+     * run метод, Вызывается для прохода одного цикла эффекта, можно переопределять либо фунцией обсчета смого эффекта,
+     * либо вспомогательной оберткой, вызывающей приватный метод.
+     * Метод должет вернуть true если обсчет эффекта был завершен успешно или false если обсчет был пропущен и кадр не менялся
+     * @param ledarr - указатель на массив, пока не используется
+     * @param opt - опция, пока не используется, вероятно нужно заменить на какую-нибудь расширяемую структуру
+    */
     virtual bool run(CRGB* ledarr, const char *opt=nullptr);
+ 
+    /**
+     * drynrun метод, всеми любимая затычка-проверка на "пустой" вызов
+     * возвращает false если еще не прошло достаточно времени с EFFECTS_RUN_TIMER
+     */
     bool dryrun();
-    virtual ~EffectCalc();
+
+    /**
+     * status - статус воркера, если работает и загружен эффект, отдает true
+     */
+    virtual bool status();
+
+    ///
+    /// следующие методы дублируют устранку "яркости", "скорости", "шкалы" для эффекта.
+    /// Сейчас это не используется, но соображения "за" следующие:
+    ///  - эффекты можно программить со своими локальными переменными, не дергая конкретный
+    ///    экземпляр myLamp.effects.getXXX
+    ///  - эффекты могут по необходимости масштабировать параметры из байта в свою размерность, или можно расширить базовый класс
+    ///  - эфекты могут переопределять методы установки параметров и корректировать их с учетом микрофона, например
+    ///
+
+
+    /**
+     * setBrt - установка яркости для воркера
+     */
+    virtual void setbrt(const byte _brt);
+
+    /**
+     * setSpd - установка скорости для воркера
+     */
+    virtual void setspd(const byte _spd);
+    /**
+     * setBrt - установка шкалы для воркера
+     */
+    virtual void setscl(const byte _scl);
+
+    /**
+     * деструктор по-умолчанию пустой, может быть переопределен
+     */
+    virtual ~EffectCalc() = default;
 };
 
 class EffectMatrix : public EffectCalc {
@@ -641,14 +704,20 @@ private:
     const int MODE_AMOUNT = sizeof(_EFFECTS_ARR)/sizeof(EFFECT);     // количество режимов
     const uint8_t maxDim = ((WIDTH>HEIGHT)?WIDTH:HEIGHT);
 
-    EFF_ENUM curEff = EFF_NONE;
-    unsigned int arrIdx = 0;
-    unsigned int storedIdx = 0; // предыдущий эффект
-    EFFECT* effects = _EFFECTS_ARR;
-    void workerset(EFF_ENUM effect);        // выбор нужного класса
+    EFF_ENUM curEff = EFF_NONE;     ///< энумератор текущего эффекта
+    unsigned int arrIdx = 0;        ///< абсолютный номер эффекта по порядку
+    unsigned int storedIdx = 0;     ///< предыдущий эффект
+    EFFECT* effects = _EFFECTS_ARR; ///< массив настроек всех эффектов
+
+    /**
+     * создает и инициализирует экземпляр класса выбранного эффекта
+     * 
+    */
+    void workerset(EFF_ENUM effect);
 
     EffectWorker(const EffectWorker&);  // noncopyable
     EffectWorker& operator=(const EffectWorker&);  // noncopyable
+
 public:
     EffectWorker() {
         workerset(EFF_NONE);
@@ -656,7 +725,7 @@ public:
 
     ~EffectWorker() {}
 
-    EffectCalc* worker = nullptr;           // класс-обработчик эффекта
+    std::unique_ptr<EffectCalc> worker;           ///< указатель-класс обработчик текущего эффекта
 
     void loadConfig(const char *cfg = nullptr) {
         if(SPIFFS.begin()){
@@ -750,9 +819,9 @@ public:
         return true; // сохранились
     }
 
-    void setBrightness(byte val) {effects[arrIdx].brightness = val;}
-    void setSpeed(byte val) {effects[arrIdx].speed = val;}
-    void setScale(byte val) {effects[arrIdx].scale = val;}
+    void setBrightness(byte val) {effects[arrIdx].brightness = val; if (worker) worker->setbrt(val);}
+    void setSpeed(byte val) {effects[arrIdx].speed = val; if (worker) worker->setspd(val);}
+    void setScale(byte val) {effects[arrIdx].scale = val; if (worker) worker->setscl(val);}
     byte getBrightness() { return effects[arrIdx].brightness; }
     byte getSpeed() { return effects[arrIdx].speed; }
     byte getScale() { return effects[arrIdx].scale; }

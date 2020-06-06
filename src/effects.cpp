@@ -37,7 +37,6 @@ JeeUI2 lib used under MIT License Copyright (c) 2019 Marsel Akhkamov
 
 #include "main.h"
 
-
   const TProgmemRGBPalette16 *firePalettes[] = {
     &HeatColors2_p,
     &WoodFireColors_p,
@@ -59,6 +58,7 @@ void EffectCalc::init(EFF_ENUM _eff, byte _brt, byte _spd, byte _scl){
   speed=_spd;
   scale=_scl;
   load();
+  active=true;
 }
 
 /*
@@ -70,20 +70,48 @@ bool EffectCalc::run(CRGB* ledarr, const char *opt){
   return false;
 }
 
-/*
+/**
  * проверка на холостой вызов для эффектов с доп. задержкой
  */
 bool EffectCalc::dryrun(){
   if((millis() - lastrun - EFFECTS_RUN_TIMER) < (unsigned)(255-speed)){
-    return true;
+    active=true;
   } else {
     lastrun = millis();
-    return false;
+    active=false;
   }
+
+  return active;
 }
 
-// Must include non-inline virtual destructor
-EffectCalc::~EffectCalc(){}
+/**
+ * status - статус воркера, если работает и загружен эффект, отдает true
+ */
+bool EffectCalc::status(){return active;}
+
+/**
+ * setBrt - установка яркости для воркера
+ */
+void EffectCalc::setbrt(const byte _brt){
+  brightness = _brt;
+}
+
+/**
+ * setSpd - установка скорости для воркера
+ */
+void EffectCalc::setspd(const byte _spd){
+  speed = _spd;
+}
+
+/**
+ * setBrt - установка шкалы для воркера
+ */
+void EffectCalc::setscl(byte _scl){
+  scale = _scl;
+}
+
+// непустой дефолтный деструктор (если понадобится)
+// EffectCalc::~EffectCalc(){LOG(println, "Effect object destroyed");}
 
 //----------------------------------------------------
 void fadePixel(uint8_t i, uint8_t j, uint8_t step)          // новый фейдер
@@ -3085,32 +3113,28 @@ void multipleStreamSmokeRoutine(CRGB *leds, const char *param)
  */
 void EffectWorker::workerset(EFF_ENUM effect){
 
-  if (worker != nullptr) {
-    delete worker;
-  }
-
   switch (effect)
   {
   case EFF_ENUM::EFF_MATRIX :
-    worker = new EffectMatrix();
+    worker = std::unique_ptr<EffectMatrix>(new EffectMatrix());
     break;
   case EFF_ENUM::EFF_SNOW :
-    worker = new EffectSnow();
+    worker = std::unique_ptr<EffectSnow>(new EffectSnow());
     break;
   case EFF_ENUM::EFF_SPARKLES :
-    worker = new EffectSparcles();
+    worker = std::unique_ptr<EffectSparcles>(new EffectSparcles());
     break;
   case EFF_ENUM::EFF_EVERYTHINGFALL :
-    worker = new EffectEverythingFall();
+    worker = std::unique_ptr<EffectEverythingFall>(new EffectEverythingFall());
     break;
   case EFF_ENUM::EFF_FIRE2012 :
-    worker = new EffectFire2012();
+    worker = std::unique_ptr<EffectFire2012>(new EffectFire2012());
     break;
   case EFF_ENUM::EFF_SNOWSTORMSTARFALL :
-    worker = new EffectStarFall();
+    worker = std::unique_ptr<EffectStarFall>(new EffectStarFall());
     break;
   case EFF_ENUM::EFF_LIGHTERS :
-    worker = new EffectLighters();
+    worker = std::unique_ptr<EffectLighters>(new EffectLighters());
     break;
   case EFF_ENUM::EFF_MADNESS :
   case EFF_ENUM::EFF_CLOUDS :
@@ -3121,10 +3145,10 @@ void EffectWorker::workerset(EFF_ENUM effect){
   case EFF_ENUM::EFF_ZEBRA :
   case EFF_ENUM::EFF_FOREST :
   case EFF_ENUM::EFF_OCEAN :
-    worker = new Effect3DNoise();
+    worker = std::unique_ptr<Effect3DNoise>(new Effect3DNoise());
     break;
   default:
-    worker = new EffectCalc();
+    worker = std::unique_ptr<EffectCalc>(new EffectCalc());
   }
 
   worker->init(effect, myLamp.effects.getBrightness(), myLamp.effects.getSpeed(), myLamp.effects.getScale());

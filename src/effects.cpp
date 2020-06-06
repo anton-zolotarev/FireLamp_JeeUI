@@ -284,12 +284,7 @@ bool EffectEverythingFall::fire2012WithPalette(CRGB*leds, const char *param) {
   curPalette = palette_arr[pos]; // выбираем из доп. регулятора
   uint8_t scale = curVal-ptPallete*pos; // разбиваю на поддиапазоны внутри диапазона, будет уходить в 0 на крайней позиции поддиапазона, ну и хрен с ним :), хотя нужно помнить!
 
-<<<<<<< HEAD
-  //uint8_t scale = myLamp.effects.getScale();
-  uint8_t COOLINGNEW = constrain((uint16_t)(scale % 32) * 8 / HEIGHT + 7, 1, 255) ;
-=======
   uint8_t COOLINGNEW = constrain((uint16_t)scale * palleteCnt / HEIGHT + 7, 1, 255) ;
->>>>>>> master
   // Array of temperature readings at each simulation cell
   // static byte GSHMEM.heat[WIDTH][HEIGHT];
 
@@ -2339,7 +2334,6 @@ uint8_t wrapY(int8_t y)
   return (y + HEIGHT) % HEIGHT;
 }
 
-<<<<<<< HEAD
 /*
  * Эффект "Огонь 2012"
  */
@@ -2353,9 +2347,6 @@ bool EffectFire2012::run(CRGB *ledarr, const char *opt){
 }
 
 bool EffectFire2012::fire2012Routine(CRGB *ledarr, const char *opt)
-{
-=======
-void fire2012Routine(CRGB *leds, const char *param)
 {
 const TProgmemRGBPalette16 *firePalettes[] = {
     &SodiumFireColors_p,
@@ -2390,30 +2381,24 @@ const TProgmemRGBPalette16 *firePalettes[] = {
   uint8_t scale = curVal-ptPallete*pos; // разбиваю на поддиапазоны внутри диапазона, будет уходить в 0 на крайней позиции поддиапазона, ну и хрен с ним :), хотя нужно помнить!
 
   
-  if((millis() - myLamp.getEffDelay() - EFFECTS_RUN_TIMER) < (unsigned)(35 - map(myLamp.effects.getSpeed(), 1, 255, 1, 35)))
-  {
-    return;
-  } else {
-    myLamp.setEffDelay(millis());
-  }
->>>>>>> master
+  // if((millis() - myLamp.getEffDelay() - EFFECTS_RUN_TIMER) < (unsigned)(35 - map(myLamp.effects.getSpeed(), 1, 255, 1, 35)))
+  // {
+  //   return;
+  // } else {
+  //   myLamp.setEffDelay(millis());
+  // }
 #if HEIGHT / 6 > 6
   #define FIRE_BASE 6
 #else
   #define FIRE_BASE HEIGHT / 6 + 1
 #endif
 
-  curPalette = firePalettes[(int)((float)myLamp.effects.getScale()/255.1*((sizeof(firePalettes)/sizeof(TProgmemRGBPalette16 *))-1))];
-
   // SMOOTHING; How much blending should be done between frames
   // Lower = more blending and smoother flames. Higher = less blending and flickery flames
-<<<<<<< HEAD
   uint8_t fireSmoothing = 80*2.0*myLamp.effects.getSpeed()/255.0+10;
-=======
-  const uint8_t fireSmoothing =90; // random8(50, 120); //map(myLamp.effects.getSpeed(), 1, 255, 20, 100);
+  //const uint8_t fireSmoothing =90; // random8(50, 120); //map(myLamp.effects.getSpeed(), 1, 255, 20, 100);
   // Add entropy to random number generator; we use a lot of it.
   random16_add_entropy(random(256));
->>>>>>> master
 
   // Loop for each column individually
   for (uint8_t x = 0; x < WIDTH; x++)
@@ -2433,13 +2418,8 @@ const TProgmemRGBPalette16 *firePalettes[] = {
     // Step 3.  Randomly ignite new 'sparks' of heat near the bottom
     if (random8() < sparking)
     {
-<<<<<<< HEAD
       int j = random(FIRE_BASE);
       noise3d[0][x][j] = qadd8(noise3d[0][x][j], random(160, 255));
-=======
-      int j = random8(FIRE_BASE);
-      GSHMEM.noise3d[0][x][j] = qadd8(GSHMEM.noise3d[0][x][j], random(160, 255));
->>>>>>> master
     }
 
     // Step 4.  Map from heat cells to LED colors

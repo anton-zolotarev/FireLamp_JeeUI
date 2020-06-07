@@ -280,13 +280,13 @@ static EFFECT _EFFECTS_ARR[] = {
     {true, true, 127, 127, 127, EFF_WHITE_COLOR, T_WHITE_COLOR, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_COLORS, T_COLORS, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_RAINBOW_2D, T_RAINBOW_2D, stubRoutine, nullptr},
-    // {true, true, 127, 127, 127, EFF_RAINBOW_2D, T_RAINBOW_2D, rainbowDiagonalRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_SPARKLES, T_SPARKLES, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_SNOW, T_SNOW, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_SNOWSTORMSTARFALL, T_SNOWSTORMSTARFALL, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_MATRIX, T_MATRIX, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_LIGHTERS, T_LIGHTERS, stubRoutine, nullptr},
-    {true, true, 127, 127, 127, EFF_LIGHTER_TRACES, T_LIGHTER_TRACES, ballsRoutine, nullptr},
+    //{true, true, 127, 127, 127, EFF_LIGHTER_TRACES, T_LIGHTER_TRACES, ballsRoutine, nullptr},
+    {true, true, 127, 127, 127, EFF_LIGHTER_TRACES, T_LIGHTER_TRACES, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_CUBE, T_CUBE, ballRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_PULSE, T_PULSE, pulseRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_EVERYTHINGFALL, T_EVERYTHINGFALL, stubRoutine, nullptr},
@@ -589,6 +589,15 @@ public:
      * деструктор по-умолчанию пустой, может быть переопределен
      */
     virtual ~EffectCalc() = default;
+};
+
+//{true, true, 127, 127, 127, EFF_LIGHTER_TRACES, T_LIGHTER_TRACES, ballsRoutine, nullptr},
+class EffectLighterTracers : public EffectCalc {
+private:
+    bool lighterTracersRoutine(CRGB *leds, const char *param);
+
+public:
+    bool run(CRGB *ledarr, const char *opt=nullptr) override;
 };
 
 class EffectRainbow : public EffectCalc {

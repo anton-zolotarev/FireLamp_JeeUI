@@ -780,11 +780,15 @@ bool EffectLighters::lightersRoutine(CRGB *leds, const char *param)
 }
 
 // ------------- светлячки со шлейфом -------------
+bool EffectLighterTracers::run(CRGB *ledarr, const char *opt){
+  return lighterTracersRoutine(*&ledarr, &*opt);
+}
+
 //#define BALLS_AMOUNT          (7U)                          // максимальное количество "шариков"
 #define CLEAR_PATH            (1U)                          // очищать путь
 #define BALL_TRACK            (1U)                          // (0 / 1) - вкл/выкл следы шариков
 #define TRACK_STEP            (70U)                         // длина хвоста шарика (чем больше цифра, тем хвост короче)
-void ballsRoutine(CRGB *leds, const char *param)
+bool EffectLighterTracers::lighterTracersRoutine(CRGB *leds, const char *param)
 {
   // static int16_t GSHMEM.coord[BALLS_AMOUNT][2U];
   // static int8_t GSHMEM.vector[BALLS_AMOUNT][2U];
@@ -854,6 +858,7 @@ void ballsRoutine(CRGB *leds, const char *param)
     }
     myLamp.setLeds(myLamp.getPixelNumber(GSHMEM.coord[j][0U], GSHMEM.coord[j][1U]), CHSV(ballColors[j], 255U, 255U));
   }
+  return true;
 }
 
 // ------------- пейнтбол -------------
@@ -3396,6 +3401,9 @@ void EffectWorker::workerset(EFF_ENUM effect){
 
   switch (effect)
   {
+  case EFF_ENUM::EFF_LIGHTER_TRACES :
+    worker = std::unique_ptr<EffectLighterTracers>(new EffectLighterTracers());
+    break;
   case EFF_ENUM::EFF_RAINBOW_2D :
     worker = std::unique_ptr<EffectRainbow>(new EffectRainbow());
     break;

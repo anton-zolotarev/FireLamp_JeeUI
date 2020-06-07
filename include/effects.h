@@ -761,19 +761,7 @@ public:
 
 class EffectFire2012 : public EffectCalc {
 private:
-  const TProgmemRGBPalette16 *firePalettes[10] = {
-    &HeatColors2_p,
-    &WoodFireColors_p,
-    &NormalFire_p,
-    &NormalFire2_p,
-    &LithiumFireColors_p,
-    &SodiumFireColors_p,
-    &CopperFireColors_p,
-    &AlcoholFireColors_p,
-    &RubidiumFireColors_p,
-    &PotassiumFireColors_p};
-
-  const TProgmemRGBPalette16 *curPalette;
+#define NUMPALETTES 10
 
   // COOLING: How much does the air cool as it rises?
   // Less cooling = taller flames.  More cooling = shorter flames.

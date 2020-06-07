@@ -111,7 +111,7 @@ void fireRoutine(CRGB*, const char*);
 //void fire2012WithPalette(CRGB*, const char*);
 void pulseRoutine(CRGB*, const char*);
 void rainbowDiagonalRoutine(CRGB*, const char*);
-void colorsRoutine(CRGB*, const char*);
+// void colorsRoutine(CRGB*, const char*);
 // void matrixRoutine(CRGB*, const char*);
 // void snowRoutine(CRGB*, const char*);
 //void snowStormStarfallRoutine(CRGB*, const char*);
@@ -280,7 +280,8 @@ static EFFECT _EFFECTS_ARR[] = {
     {true, true, 127, 127, 127, EFF_WHITE_COLOR, T_WHITE_COLOR, stubRoutine, nullptr},
     // {true, true, 127, 127, 127, EFF_WHITE_COLOR, T_WHITE_COLOR, whiteColorStripeRoutine, nullptr},
 
-    {true, true, 127, 127, 127, EFF_COLORS, T_COLORS, colorsRoutine, nullptr},
+    // {true, true, 127, 127, 127, EFF_COLORS, T_COLORS, colorsRoutine, nullptr},
+    {true, true, 127, 127, 127, EFF_COLORS, T_COLORS, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_RAINBOW_2D, T_RAINBOW_2D, rainbowDiagonalRoutine, nullptr},
 //    {true, true, 127, 127, 127, EFF_SPARKLES, T_SPARKLES, sparklesRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_SPARKLES, T_SPARKLES, stubRoutine, nullptr},
@@ -596,6 +597,14 @@ public:
      * деструктор по-умолчанию пустой, может быть переопределен
      */
     virtual ~EffectCalc() = default;
+};
+
+class EffectColors : public EffectCalc {
+private:
+    bool colorsRoutine(CRGB *leds, const char *param);
+
+public:
+    bool run(CRGB *ledarr, const char *opt=nullptr) override;
 };
 
 class EffectWhiteColorStripe : public EffectCalc {

@@ -476,7 +476,13 @@ void rainbowDiagonalRoutine(CRGB *leds, const char *param)
 }
 
 // ------------- цвета -----------------
-void colorsRoutine(CRGB *leds, const char *param)
+bool EffectColors::run(CRGB *ledarr, const char *opt){
+  // if (dryrun())
+  //   return false;
+  return colorsRoutine(*&ledarr, &*opt);
+}
+
+bool EffectColors::colorsRoutine(CRGB *leds, const char *param)
 {
   static unsigned int step = 0; // доп. задержка
   unsigned int delay = (myLamp.effects.getSpeed()==1)?4294967294:255-myLamp.effects.getSpeed()+1; // на скорости 1 будет очень долгое ожидание)))
@@ -531,6 +537,7 @@ EVERY_N_SECONDS(1){
       GSHMEM.ihue += myLamp.effects.getScale(); // смещаемся на следущий
     }
   }
+  return true;
 }
 
 // ------------- матрица ---------------
@@ -3382,6 +3389,9 @@ void EffectWorker::workerset(EFF_ENUM effect){
 
   switch (effect)
   { 
+  case EFF_ENUM::EFF_COLORS :
+    worker = std::unique_ptr<EffectColors>(new EffectColors());
+    break;
   case EFF_ENUM::EFF_WHITE_COLOR :
     worker = std::unique_ptr<EffectWhiteColorStripe>(new EffectWhiteColorStripe());
     break;

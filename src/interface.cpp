@@ -919,10 +919,11 @@ void update(){ // функция выполняется после ввода д
                 jee.var(F("param"), tmp);
                 tmpParam = tmp;
             }
+/*  По-моему это тоже самое что и выше делается по новой, не?
             if(strcmp_P(tmpParam.c_str(), curEff->param)){ // различаются  || (curEff->param==nullptr && (jee.param(F("param"))).length()!=0)
                 curEff->updateParam(tmpParam.c_str());
             }
-
+*/
             myLamp.setLoading(true); // перерисовать эффект
 
             if(iGLOBAL.prevEffect!=nullptr){

@@ -133,7 +133,7 @@ void lavaNoiseRoutine(CRGB*, const char*);
 void BBallsRoutine(CRGB*, const char*);
 void Sinusoid3Routine(CRGB*, const char*);
 void metaBallsRoutine(CRGB*, const char*);
-void spiroRoutine(CRGB*, const char*);
+//void spiroRoutine(CRGB*, const char*);
 void rainbowCometRoutine(CRGB*, const char*);
 void rainbowComet3Routine(CRGB*, const char*);
 void prismataRoutine(CRGB*, const char*);
@@ -312,7 +312,7 @@ static EFFECT _EFFECTS_ARR[] = {
     {true, true, 127, 127, 127, EFF_BBALS, T_BBALS, BBallsRoutine, nullptr}, 
     {true, true, 127, 127, 127, EFF_SINUSOID3, T_SINUSOID3, Sinusoid3Routine, nullptr},
     {true, true, 127, 127, 127, EFF_METABALLS, T_METABALLS, metaBallsRoutine, nullptr},
-    {true, true, 127, 127, 127, EFF_SPIRO, T_SPIRO, spiroRoutine, nullptr},
+    {true, true, 127, 127, 127, EFF_SPIRO, T_SPIRO, stubRoutine, nullptr},      // переделывается
     {true, true, 127, 127, 127, EFF_RAINBOWCOMET, T_RAINBOWCOMET, rainbowCometRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_RAINBOWCOMET3, T_RAINBOWCOMET3, rainbowComet3Routine, nullptr},
     {true, true, 127, 127, 127, EFF_PRIZMATA, T_PRIZMATA, prismataRoutine, nullptr},
@@ -349,6 +349,7 @@ static EFFECT _EFFECTS_ARR[] = {
 class SHARED_MEM {
 public:
     union {
+/*
 		struct { // spiroRoutine
             boolean spiroincrement;
             boolean spirohandledChange;
@@ -357,6 +358,7 @@ public:
             float spirotheta1;
             float spirotheta2;
 		};
+*/
         struct { // BouncingBalls2014
             uint8_t bballsCOLOR[bballsMaxNUM_BALLS] ;                   // прикручено при адаптации для разноцветных мячиков
             uint8_t bballsX[bballsMaxNUM_BALLS] ;                       // прикручено при адаптации для распределения мячиков по радиусу лампы
@@ -519,19 +521,32 @@ class EffectCalc {
 private:
 
 public:
-    bool active=0;          /** работает ли воркер, пока нужно чтобы пропускать холостые кадры */
+    bool active=0;          /**< работает ли воркер и был ли обсчет кадров с момента последнего вызова, пока нужно чтобы пропускать холостые кадры */
     uint32_t lastrun=0;     /**< счетчик времени для эффектов с "задержкой" */
     EFF_ENUM effect;        /**< энумератор эффекта */
     byte brightness;
     byte speed;
     byte scale;
+    uint8_t rval;               /**< загадочная R */
+    uint8_t palettescale;       /**< странная переменная шкалы внутри палитры */
     uint8_t mmf=0;
     uint8_t mmp=0;
+
+    /** флаг, включает использование палитр в эффекте.
+     *  влияет на:
+     *  - подгрузку дефолтовых палитр при init()
+     *  - переключение палитры при изменении ползунка "шкалы"
+     *  -  проверку R?
+     */
+    bool usepalettes=false;
+    std::vector<PGMPallete*> palettes;          /**< набор используемых палитр (пустой)*/
+    TProgmemRGBPalette16 const *curPalette = nullptr;     /**< указатель на текущую палитру */
 
     EffectCalc(){}
 
     /**
      * intit метод, вызывается отдельно после создания экземпляра эффекта для установки базовых переменных
+     * в конце выполнения вызывает метод load() который может быть переопределен в очернем классе
      * @param _eff - энумератор эффекта, может пригодится для мультиэффектов типа 3DNoise если эффект
      * может использовать разные функции для различных версий эффекта
      * @param _brt - яркость, прилетающая из "настроек" эффекта, эффект может менять свою яркость позже независимо от указок "сверху"
@@ -539,7 +554,7 @@ public:
      * @param _scl - шкала, прилетающая из "настроек" эффекта, эффект может менять свою шкалу позже независимо от указок "сверху"
      *  
     */
-    virtual void init(EFF_ENUM _eff, byte _brt, byte _spd, byte _scl);
+    void init(EFF_ENUM _eff, byte _brt, byte _spd, byte _scl);
 
     /**
      * load метод, по умолчанию пустой. Вызывается автоматом из init(), в дочернем классе можно заменять на процедуру первой загрузки эффекта (вместо того что выполняется под флагом load)
@@ -586,10 +601,44 @@ public:
      * setSpd - установка скорости для воркера
      */
     virtual void setspd(const byte _spd);
+
     /**
      * setBrt - установка шкалы для воркера
      */
     virtual void setscl(const byte _scl);
+
+    /**
+     * setrval - установка переменной R
+     */
+    virtual void setrval(const byte _R);
+
+    /**
+     * загрузка дефолтных палитр в массив и установка текущей палитры
+     * в соответствие в "бегунком" шкала/R
+     */
+    virtual void palettesload();
+
+    /**
+     * palletemap - меняет указатель на текущую палитру из набора в соответствие с "ползунком"
+     * @param _val - байт "ползунка"
+     * @param _pals - набор с палитрами
+     */
+    virtual void palettemap(std::vector<PGMPallete*> &_pals, const uint8_t _val);
+
+    /**
+     * костылик-времяночка пока не решим как обновлять параметры по событию
+     * метод лезет в массив настроек эффекта, вычитывает оттуда scale и R
+     * и обновляет палитру.
+     */
+    void scalerefresh();
+
+    /**
+     * Набор общих мат. функций, которые используют несколько эффектов
+     * может позже вынесем в отдельный класс если будет смысл
+     */
+    uint8_t mapsin8(uint8_t theta, uint8_t lowest = 0, uint8_t highest = 255);
+    uint8_t mapcos8(uint8_t theta, uint8_t lowest = 0, uint8_t highest = 255);
+
 
     /**
      * деструктор по-умолчанию пустой, может быть переопределен
@@ -709,6 +758,34 @@ public:
     void load() override;
     bool run(CRGB *ledarr, const char *opt=nullptr) override;
 };
+
+class EffectSpiro : public EffectCalc {
+private:
+  const uint8_t spiroradiusx = WIDTH / 4;
+  const uint8_t spiroradiusy = HEIGHT / 4;
+  
+  const uint8_t spirocenterX = WIDTH / 2;
+  const uint8_t spirocenterY = HEIGHT / 2;
+  
+  const uint8_t spirominx = spirocenterX - spiroradiusx;
+  const uint8_t spiromaxx = spirocenterX + spiroradiusx + 1;
+  const uint8_t spirominy = spirocenterY - spiroradiusy;
+  const uint8_t spiromaxy = spirocenterY + spiroradiusy + 1;
+
+  boolean spiroincrement = false;
+  boolean spirohandledChange = false;
+  byte spirohueoffset = 0;
+  uint8_t spirocount = 1;
+  float spirotheta1 = 0;
+  float spirotheta2 = 0;
+
+  bool spiroRoutine(CRGB *leds, const char *param);
+
+public:
+    void load() override;
+    bool run(CRGB *ledarr, const char *opt=nullptr) override;
+};
+
 
 
 class EffectWorker {

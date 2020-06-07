@@ -57,8 +57,8 @@ void EffectCalc::init(EFF_ENUM _eff, byte _brt, byte _spd, byte _scl){
   brightness=_brt;
   speed=_spd;
   scale=_scl;
-  load();
   active=true;
+  load();
 }
 
 /*
@@ -108,7 +108,73 @@ void EffectCalc::setspd(const byte _spd){
  */
 void EffectCalc::setscl(byte _scl){
   scale = _scl;
+  if (usepalettes)    // менять палитру в соответствие со шкалой, если выставлен флаг
+  //  palettemap(palettes, _scl);
+    scalerefresh();
 }
+
+/**
+ * setrval - установка переменной Rval
+ * должна вызываться внешним методом при смене рвал в гуе или где-там...
+ */
+void EffectCalc::setrval(const uint8_t _rval){
+  rval = _rval;
+  // при смене Rval меняем палитру
+  palettemap(palettes, _rval);
+}
+
+// Load palletes into array
+void EffectCalc::palettesload(){
+  palettes.reserve(FASTLED_PALETTS_COUNT);
+  palettes.push_back(&CloudColors_p);
+  palettes.push_back(&ForestColors_p);
+  palettes.push_back(&HeatColors_p);
+  palettes.push_back(&LavaColors_p);
+  palettes.push_back(&OceanColors_p);
+  palettes.push_back(&PartyColors_p);
+  palettes.push_back(&RainbowColors_p);
+  palettes.push_back(&RainbowStripeColors_p);
+
+  usepalettes = true; // активируем "переключатель" палитр
+}
+
+void EffectCalc::palettemap(std::vector<PGMPallete*> &_pals, const uint8_t _val){
+
+  #define MAX_RANGE 255   // заложим дейфан пока нет динамических ползунков
+
+  if (!_pals.size()) {
+    LOG(println,F("No palettes loaded!"));
+    return;
+  }
+
+  uint8_t ptPallete;    // сколько пунктов приходится на одну палитру; 255.1 - диапазон ползунка, не включая 255, т.к. растягиваем только нужное :)
+  uint8_t pos;        // позиция в массиве указателей паллитр
+  uint8_t curVal;     // curVal == либо var как есть, либо getScale
+
+  ptPallete = MAX_RANGE/_pals.size() + !!(MAX_RANGE%_pals.size());     // сколько пунктов приходится на одну палитру; 255.1 - диапазон ползунка, не включая 255, т.к. растягиваем только нужное :)
+  pos = _val/ptPallete + !!(_val%ptPallete);
+  curPalette = _pals.at(--pos); // Устанавливаем выбранную палитру,  -1 т.к. индекс массива начинается с 0-ля 
+  palettescale = _val-ptPallete*(pos); // разбиваю на поддиапазоны внутри диапазона, будет уходить в 0 на крайней позиции поддиапазона, ну и хрен с ним :), хотя нужно помнить!
+
+  LOG(printf_P,PSTR("Psize=%d, POS=%d, ptPallete=%d, palettescale=%d, szof=%d\n"), _pals.size(), pos, ptPallete, palettescale, sizeof(TProgmemRGBPalette16 *));
+}
+
+/**
+ * костылик-времяночка пока не решим как обновлять параметры по событию
+ * метод лезет в массив настроек эффекта, вычитывает оттуда scale и R
+ * и обновляет палитру.
+ */
+void EffectCalc::scalerefresh(){
+  String var = myLamp.effects.getCurrent()->getValue(myLamp.effects.getCurrent()->param, F("R"));
+  if(!var.isEmpty()){
+    rval = var.toInt();
+    palettemap(palettes, rval);
+  } else {
+    scale = myLamp.effects.getScale();
+    palettemap(palettes, scale);
+  }
+}
+
 
 // непустой дефолтный деструктор (если понадобится)
 // EffectCalc::~EffectCalc(){LOG(println, "Effect object destroyed");}
@@ -1331,7 +1397,9 @@ void metaBallsRoutine(CRGB *leds, const char *param)
  * Copyright (c) 2014 Jason Coon
  * Неполная адаптация SottNick
  */
-uint8_t mapsin8(uint8_t theta, uint8_t lowest = 0, uint8_t highest = 255) {
+
+// функция переиспользуется в другом эффекте
+uint8_t EffectCalc::mapsin8(uint8_t theta, uint8_t lowest, uint8_t highest) {
   uint8_t beatsin = sin8(theta);
   uint8_t rangewidth = highest - lowest;
   uint8_t scaledbeat = scale8(beatsin, rangewidth);
@@ -1339,7 +1407,8 @@ uint8_t mapsin8(uint8_t theta, uint8_t lowest = 0, uint8_t highest = 255) {
   return result;
 }
 
-uint8_t mapcos8(uint8_t theta, uint8_t lowest = 0, uint8_t highest = 255) {
+// функция переиспользуется в другом эффекте
+uint8_t EffectCalc::mapcos8(uint8_t theta, uint8_t lowest, uint8_t highest) {
   uint8_t beatcos = cos8(theta);
   uint8_t rangewidth = highest - lowest;
   uint8_t scaledbeat = scale8(beatcos, rangewidth);
@@ -1347,118 +1416,86 @@ uint8_t mapcos8(uint8_t theta, uint8_t lowest = 0, uint8_t highest = 255) {
   return result;
 }
 
-void spiroRoutine(CRGB *leds, const char *param)
+void EffectSpiro::load(){
+  palettesload();    // подгружаем дефолтные палитры
+  scalerefresh();    // выбираем палитру согласно "шкале"
+}
+
+bool EffectSpiro::run(CRGB *ledarr, const char *opt){
+  /**
+   * дергаем костыль раз в секунду для обвления палитры/шкалы
+   */
+  EVERY_N_SECONDS(1){
+    scalerefresh();
+  }
+  return spiroRoutine(*&ledarr, &*opt);
+}
+
+// ***** Эффект "Спираль"     **** переделывается под палитры из базового класса
+bool EffectSpiro::spiroRoutine(CRGB *leds, const char *param)
 {
-    //static float GSHMEM.spirotheta1 = 0;
-    //static float GSHMEM.spirotheta2 = 0;
-    //static byte GSHMEM.spirohueoffset = 0;
-    //static uint8_t GSHMEM.spirocount = 1;
-    //static boolean GSHMEM.spiroincrement = false;
-    //static boolean GSHMEM.spirohandledChange = false;
-    if(myLamp.isLoading()){
-      GSHMEM.spirotheta1 = 0;
-      GSHMEM.spirotheta2 = 0;
-      GSHMEM.spirohueoffset = 0;
-      GSHMEM.spirocount = 1;
-      GSHMEM.spiroincrement = false;
-      GSHMEM.spirohandledChange = false;
-    }
 
-    const uint8_t spiroradiusx = WIDTH / 4;
-    const uint8_t spiroradiusy = HEIGHT / 4;
-    
-    const uint8_t spirocenterX = WIDTH / 2;
-    const uint8_t spirocenterY = HEIGHT / 2;
-    
-    const uint8_t spirominx = spirocenterX - spiroradiusx;
-    const uint8_t spiromaxx = spirocenterX + spiroradiusx + 1;
-    const uint8_t spirominy = spirocenterY - spiroradiusy;
-    const uint8_t spiromaxy = spirocenterY + spiroradiusy + 1;
+  // страхуемся от креша
+  if (curPalette == nullptr) {
+    return false;
+  }
+
+  const float speed_factor = (float)myLamp.effects.getSpeed()/127+1;
+  uint8_t spirooffset = 256 / spirocount;
+  boolean change = false;
+  myLamp.blur2d(15);//45/(speed_factor*3));
+  myLamp.dimAll(254U - palettescale);
+  //myLamp.dimAll(250-speed_factor*7);
   
-    const TProgmemRGBPalette16 *palette_arr[] = {&PartyColors_p, &OceanColors_p, &LavaColors_p, &HeatColors_p, &WaterfallColors_p, &CloudColors_p, &ForestColors_p, &RainbowColors_p, &RainbowStripeColors_p};
-    TProgmemRGBPalette16 const *curPalette;
-    uint8_t palleteCnt = sizeof(palette_arr)/sizeof(TProgmemRGBPalette16 *); // кол-во палитр
-    float ptPallete; // сколько пунктов приходится на одну палитру; 255.1 - диапазон ползунка, не включая 255, т.к. растягиваем только нужное :)
-    uint8_t pos; // позиция в массиве указателей паллитр
-    uint8_t curVal; // curVal == либо var как есть, либо getScale
-    String var = myLamp.effects.getCurrent()->getValue(myLamp.effects.getCurrent()->param, F("R"));
-    if(!var.isEmpty()){
-      ptPallete = 255.1/palleteCnt; // сколько пунктов приходится на одну палитру; 255.1 - диапазон ползунка, не включая 255, т.к. растягиваем только нужное :)
-      pos = (uint8_t)(var.toFloat()/ptPallete); // для 9 палитр будет 255.1/9==28.34, как следствие ползунок/28.34, при 1...28 будет давать 0, 227...255 -> 8
-      curVal = var.toInt();
-    } else {
-      ptPallete = 255.1/palleteCnt; // сколько пунктов приходится на одну палитру; 255.1 - диапазон ползунка, не включая 255, т.к. растягиваем только нужное :)
-      pos = (uint8_t)((float)myLamp.effects.getScale()/ptPallete);
-      curVal = myLamp.effects.getScale();
+  for (int i = 0; i < spirocount; i++) {
+    uint8_t x = mapsin8(spirotheta1 + i * spirooffset, spirominx, spiromaxx);
+    uint8_t y = mapcos8(spirotheta1 + i * spirooffset, spirominy, spiromaxy);
+    uint8_t x2 = mapsin8(spirotheta2 + i * spirooffset, x - spiroradiusx, x + spiroradiusx);
+    uint8_t y2 = mapcos8(spirotheta2 + i * spirooffset, y - spiroradiusy, y + spiroradiusy);
+    CRGB color = ColorFromPalette(*curPalette, (spirohueoffset + i * spirooffset), 128U);
+    if (x2<WIDTH && y2<HEIGHT){ // добавил проверки. не знаю, почему эффект подвисает без них
+      CRGB tmpColor = myLamp.getPixColorXY(x2, y2);
+      tmpColor += color;
+      myLamp.setLeds(myLamp.getPixelNumber(x2, y2), tmpColor); // += color
     }
-    curPalette = palette_arr[pos]; // выбираем из доп. регулятора
-    uint8_t scale = curVal-ptPallete*pos; // разбиваю на поддиапазоны внутри диапазона, будет уходить в 0 на крайней позиции поддиапазона, ну и хрен с ним :), хотя нужно помнить!
-
-// EVERY_N_SECONDS(1){
-//   LOG(printf_P,PSTR("curPalette=%d, curVal=%d, scale=%d\n"), pos, curVal, scale);
-// }
-
-    const float speed_factor = (float)myLamp.effects.getSpeed()/127+1;
-    uint8_t spirooffset = 256 / GSHMEM.spirocount;
-    boolean change = false;
-
-    myLamp.blur2d(15);//45/(speed_factor*3));
-    myLamp.dimAll(254U - scale);
-    //myLamp.dimAll(250-speed_factor*7);
-
     
-    for (int i = 0; i < GSHMEM.spirocount; i++) {
-      uint8_t x = mapsin8(GSHMEM.spirotheta1 + i * spirooffset, spirominx, spiromaxx);
-      uint8_t y = mapcos8(GSHMEM.spirotheta1 + i * spirooffset, spirominy, spiromaxy);
+    if(x2 == spirocenterX && y2 == spirocenterY) change = true;
+  }
 
-      uint8_t x2 = mapsin8(GSHMEM.spirotheta2 + i * spirooffset, x - spiroradiusx, x + spiroradiusx);
-      uint8_t y2 = mapcos8(GSHMEM.spirotheta2 + i * spirooffset, y - spiroradiusy, y + spiroradiusy);
+  spirotheta2 += 2*speed_factor;
 
-      CRGB color = ColorFromPalette(*curPalette, (GSHMEM.spirohueoffset + i * spirooffset), 128U);
+  EVERY_N_MILLIS(EFFECTS_RUN_TIMER/2) {
+    spirotheta1 += 1*speed_factor;
+  }
 
-      if (x2<WIDTH && y2<HEIGHT){ // добавил проверки. не знаю, почему эффект подвисает без них
-        CRGB tmpColor = myLamp.getPixColorXY(x2, y2);
-        tmpColor += color;
-        myLamp.setLeds(myLamp.getPixelNumber(x2, y2), tmpColor); // += color
-      }
+  EVERY_N_MILLIS(50) {
+    if (change && !spirohandledChange) {
+      spirohandledChange = true;
       
-      if(x2 == spirocenterX && y2 == spirocenterY) change = true;
-    }
-
-    GSHMEM.spirotheta2 += 2*speed_factor;
-
-    EVERY_N_MILLIS(EFFECTS_RUN_TIMER/2) {
-      GSHMEM.spirotheta1 += 1*speed_factor;
-    }
-
-    EVERY_N_MILLIS(50) {
-      if (change && !GSHMEM.spirohandledChange) {
-        GSHMEM.spirohandledChange = true;
-        
-        if (GSHMEM.spirocount >= WIDTH || GSHMEM.spirocount == 1) GSHMEM.spiroincrement = !GSHMEM.spiroincrement;
-
-        if (GSHMEM.spiroincrement) {
-          if(GSHMEM.spirocount >= 4)
-            GSHMEM.spirocount *= 2;
-          else
-            GSHMEM.spirocount += 1;
-        }
-        else {
-          if(GSHMEM.spirocount > 4)
-            GSHMEM.spirocount /= 2;
-          else
-            GSHMEM.spirocount -= 1;
-        }
-
-        spirooffset = 256 / GSHMEM.spirocount;
+      if (spirocount >= WIDTH || spirocount == 1) spiroincrement = !spiroincrement;
+      if (spiroincrement) {
+        if(spirocount >= 4)
+          spirocount *= 2;
+        else
+          spirocount += 1;
+      } else {
+        if(spirocount > 4)
+          spirocount /= 2;
+        else
+            spirocount -= 1;
       }
-      
-      if(!change) GSHMEM.spirohandledChange = false;
-    }
 
-    EVERY_N_MILLIS(33) {
-      GSHMEM.spirohueoffset += 1;
+      spirooffset = 256 / spirocount;
     }
+      
+    if(!change) spirohandledChange = false;
+  }
+
+  EVERY_N_MILLIS(33) {
+      spirohueoffset += 1;
+  }
+
+  return true;
 }
 
 // ***** RAINBOW COMET / РАДУЖНАЯ КОМЕТА *****
@@ -1689,7 +1726,7 @@ void rainbowComet3Routine(CRGB *leds, const char *param)
 // ============= ЭФФЕКТ ПРИЗМАТА =============== 
 // Prismata Loading Animation
 void prismataRoutine(CRGB *leds, const char *param)
-{ 
+{
   const TProgmemRGBPalette16 *palette_arr[] = {&PartyColors_p, &OceanColors_p, &LavaColors_p, &HeatColors_p, &WaterfallColors_p, &CloudColors_p, &ForestColors_p, &RainbowColors_p, &RainbowStripeColors_p};
   TProgmemRGBPalette16 const *curPalette;
   uint8_t palleteCnt = sizeof(palette_arr)/sizeof(TProgmemRGBPalette16 *); // кол-во палитр
@@ -1710,14 +1747,14 @@ void prismataRoutine(CRGB *leds, const char *param)
   uint8_t scale = curVal-ptPallete*pos; // разбиваю на поддиапазоны внутри диапазона, будет уходить в 0 на крайней позиции поддиапазона, ну и хрен с ним :), хотя нужно помнить!
 
   EVERY_N_MILLIS(100) {
-    GSHMEM.spirohueoffset += 1;
+  //    GSHMEM.spirohueoffset += 1;   TO BE FIXED!!!
   }
 
   myLamp.blur2d(15);
   myLamp.dimAll(254U - scale);
   for (uint8_t x = 0; x < WIDTH; x++) {
       uint8_t y = beatsin8(x + 1 * myLamp.effects.getSpeed()/5, 0, HEIGHT-1);
-      myLamp.drawPixelXY(x, y, ColorFromPalette(*curPalette, (x+GSHMEM.spirohueoffset) * 4));
+      // myLamp.drawPixelXY(x, y, ColorFromPalette(*curPalette, (x+GSHMEM.spirohueoffset) * 4));  // TO BE FIXED
     }
 }
 
@@ -2228,9 +2265,10 @@ void radarRoutine(CRGB *leds, const char *param)
 
   for (uint8_t offset = 0U; offset < WIDTH / 2U - 1U; offset++)
   {
-    myLamp.setLeds(myLamp.getPixelNumber(mapcos8(GSHMEM.eff_theta, offset, (WIDTH - 1U)-offset),
-                   mapsin8(GSHMEM.eff_theta, offset, (WIDTH - 1U)-offset)),
-                   ColorFromPalette(*curPalette, 255U - (offset * 16U + GSHMEM.eff_offset)));
+    // TO BE FIXED
+    //myLamp.setLeds(myLamp.getPixelNumber(mapcos8(GSHMEM.eff_theta, offset, (WIDTH - 1U)-offset),
+    //               mapsin8(GSHMEM.eff_theta, offset, (WIDTH - 1U)-offset)),
+    //               ColorFromPalette(*curPalette, 255U - (offset * 16U + GSHMEM.eff_offset)));
     
     EVERY_N_MILLIS(24)
     {
@@ -3428,6 +3466,9 @@ void EffectWorker::workerset(EFF_ENUM effect){
   case EFF_ENUM::EFF_FOREST :
   case EFF_ENUM::EFF_OCEAN :
     worker = std::unique_ptr<Effect3DNoise>(new Effect3DNoise());
+    break;
+  case EFF_ENUM::EFF_SPIRO :
+    worker = std::unique_ptr<EffectSpiro>(new EffectSpiro());
     break;
   default:
     worker = std::unique_ptr<EffectCalc>(new EffectCalc());

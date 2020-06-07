@@ -307,6 +307,11 @@ bool EffectEverythingFall::fire2012WithPalette(CRGB*leds, const char *param) {
 
 // --------------------------- эффект пульс ----------------------
 // Stefan Petrick's PULSE Effect mod by PalPalych for GyverLamp 
+bool EffectPulse::run(CRGB *ledarr, const char *opt){
+  if (dryrun())
+    return false;
+  return pulseRoutine(*&ledarr, &*opt);
+}
 
 void drawCircle(int16_t x0, int16_t y0, uint16_t radius, const CRGB & color){
   int a = radius, b = 0;
@@ -339,12 +344,12 @@ void drawCircle(int16_t x0, int16_t y0, uint16_t radius, const CRGB & color){
 
 // uint8_t GSHMEM.pulse_hue;
 // uint8_t GSHMEM.pulse_step = 0;
-void pulseRoutine(CRGB *leds, const char *param) {
-    if((millis() - myLamp.getEffDelay() - EFFECTS_RUN_TIMER) < (unsigned)(255-myLamp.effects.getSpeed())){
-      return;
-    } else {
-      myLamp.setEffDelay(millis());
-    }
+bool EffectPulse::pulseRoutine(CRGB *leds, const char *param) {
+    // if((millis() - myLamp.getEffDelay() - EFFECTS_RUN_TIMER) < (unsigned)(255-myLamp.effects.getSpeed())){
+    //   return;
+    // } else {
+    //   myLamp.setEffDelay(millis());
+    // }
 
   if(myLamp.isLoading()){
 	GSHMEM.pulse_step = 0;
@@ -416,6 +421,7 @@ void pulseRoutine(CRGB *leds, const char *param) {
     GSHMEM.pulse_step = 0;
   }
   GSHMEM.pulse_step++;
+  return true;
 }
 
 // радуги 2D
@@ -3405,6 +3411,9 @@ void EffectWorker::workerset(EFF_ENUM effect){
 
   switch (effect)
   {
+  case EFF_ENUM::EFF_PULSE :
+    worker = std::unique_ptr<EffectPulse>(new EffectPulse());
+    break;
   case EFF_ENUM::EFF_CUBE :
     worker = std::unique_ptr<EffectBall>(new EffectBall());
     break;

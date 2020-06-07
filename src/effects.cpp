@@ -439,7 +439,13 @@ void rainbowHorVertRoutine(bool isVertical)
 }
 
 // ------------- радуга диагональная -------------
-void rainbowDiagonalRoutine(CRGB *leds, const char *param) 
+bool EffectRainbow::run(CRGB *ledarr, const char *opt){
+  // if (dryrun())
+  //   return false;
+  return rainbowDiagonalRoutine(*&ledarr, &*opt);
+}
+
+bool EffectRainbow::rainbowDiagonalRoutine(CRGB *leds, const char *param) 
 {
   if((millis() - myLamp.getEffDelay() - EFFECTS_RUN_TIMER)
 #ifdef MIC_EFFECTS
@@ -447,17 +453,17 @@ void rainbowDiagonalRoutine(CRGB *leds, const char *param)
 #else
     < (unsigned)(255-myLamp.effects.getSpeed())){
 #endif
-    return;
+    return false;
   } else {
     myLamp.setEffDelay(millis());
   }
 
   if(myLamp.effects.getScale()<85){
     rainbowHorVertRoutine(false);
-    return;
+    return true;
   } else if (myLamp.effects.getScale()>170){
     rainbowHorVertRoutine(true);
-    return;
+    return true;
   }
 
   GSHMEM.hue += 4;
@@ -473,6 +479,7 @@ void rainbowDiagonalRoutine(CRGB *leds, const char *param)
       myLamp.drawPixelXY(i, j, thisColor);
     }
   }
+  return true;
 }
 
 // ------------- цвета -----------------
@@ -3388,7 +3395,10 @@ void multipleStreamSmokeRoutine(CRGB *leds, const char *param)
 void EffectWorker::workerset(EFF_ENUM effect){
 
   switch (effect)
-  { 
+  {
+  case EFF_ENUM::EFF_RAINBOW_2D :
+    worker = std::unique_ptr<EffectRainbow>(new EffectRainbow());
+    break;
   case EFF_ENUM::EFF_COLORS :
     worker = std::unique_ptr<EffectColors>(new EffectColors());
     break;

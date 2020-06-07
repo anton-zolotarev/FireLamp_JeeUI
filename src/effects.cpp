@@ -868,8 +868,12 @@ bool EffectLighterTracers::lighterTracersRoutine(CRGB *leds, const char *param)
 }
 
 // ------------- пейнтбол -------------
+bool EffectLightBalls::run(CRGB *ledarr, const char *opt){
+  return lightBallsRoutine(*&ledarr, &*opt);
+}
+
 #define BORDERTHICKNESS       (1U)                          // глубина бордюра для размытия яркой частицы: 0U - без границы (резкие края); 1U - 1 пиксель (среднее размытие) ; 2U - 2 пикселя (глубокое размытие)
-void lightBallsRoutine(CRGB *leds, const char *param)
+bool EffectLightBalls::lightBallsRoutine(CRGB *leds, const char *param)
 {
   const uint8_t paintWidth = WIDTH - BORDERTHICKNESS * 2;
   const uint8_t paintHeight = HEIGHT - BORDERTHICKNESS * 2;
@@ -895,6 +899,8 @@ void lightBallsRoutine(CRGB *leds, const char *param)
   leds[myLamp.getPixelNumber( highByte(j * paintWidth) + BORDERTHICKNESS, highByte(k * paintHeight) + BORDERTHICKNESS)] += CHSV( ms / 41, 200U, 255U);
   leds[myLamp.getPixelNumber( highByte(k * paintWidth) + BORDERTHICKNESS, highByte(m * paintHeight) + BORDERTHICKNESS)] += CHSV( ms / 37, 200U, 255U);
   leds[myLamp.getPixelNumber( highByte(m * paintWidth) + BORDERTHICKNESS, highByte(i * paintHeight) + BORDERTHICKNESS)] += CHSV( ms / 53, 200U, 255U);
+
+  return true;
 }
 
 // ------------- блуждающий кубик -------------
@@ -3409,6 +3415,9 @@ void EffectWorker::workerset(EFF_ENUM effect){
 
   switch (effect)
   {
+  case EFF_ENUM::EFF_PAINTBALL :
+    worker = std::unique_ptr<EffectLightBalls>(new EffectLightBalls());
+    break;
   case EFF_ENUM::EFF_FIRE :
     worker = std::unique_ptr<EffectFire>(new EffectFire());
     break;

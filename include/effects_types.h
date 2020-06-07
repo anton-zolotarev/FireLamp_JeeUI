@@ -117,6 +117,14 @@ static const TProgmemRGBPalette16 WoodFireColors_p FL_PROGMEM = {CRGB::Black, CR
 #define NOISE_SCALE_AMP  (58UL)    // амплификатор шкалы
 #define NOISE_SCALE_ADD  (8UL)    // корректор шкалы
 
+#define bballsMaxNUM_BALLS     (16U)                // максимальное количество мячиков прикручено при адаптации для бегунка Масштаб
+#define BALLS_AMOUNT           (7U)                 // максимальное количество "шариков"
+#define LIGHTERS_AM            (64U)                // светлячки
+#define NUM_LAYERS             (1U)                 // The coordinates for 3 16-bit noise spaces.
+#define NUM_LAYERS2            (2U)                 // The coordinates for 3 16-bit noise spaces.
+#define AVAILABLE_BOID_COUNT   (10U)                // стая, кол-во птиц
+
+
 template <class T>
 class Vector2 {
 public:

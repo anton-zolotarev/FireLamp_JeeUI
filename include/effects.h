@@ -137,7 +137,7 @@ void BBallsRoutine(CRGB*, const char*);
 void rainbowCometRoutine(CRGB*, const char*);
 void rainbowComet3Routine(CRGB*, const char*);
 //void prismataRoutine(CRGB*, const char*);
-void flockRoutine(CRGB*, const char*);
+//void flockRoutine(CRGB*, const char*);
 void swirlRoutine(CRGB*, const char*);
 void incrementalDriftRoutine(CRGB*, const char*);
 void incrementalDriftRoutine2(CRGB*, const char*);
@@ -304,11 +304,10 @@ static EFFECT _EFFECTS_ARR[] = {
     {true, true, 127, 127, 127, EFF_SINUSOID3, T_SINUSOID3, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_METABALLS, T_METABALLS, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_SPIRO, T_SPIRO, stubRoutine, nullptr},
-    // {true, true, 127, 127, 127, EFF_SPIRO, T_SPIRO, spiroRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_RAINBOWCOMET, T_RAINBOWCOMET, rainbowCometRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_RAINBOWCOMET3, T_RAINBOWCOMET3, rainbowComet3Routine, nullptr},
     {true, true, 127, 127, 127, EFF_PRIZMATA, T_PRIZMATA, stubRoutine, nullptr},
-    {true, true, 127, 127, 127, EFF_FLOCK, T_FLOCK, flockRoutine, nullptr},
+    {true, true, 127, 127, 127, EFF_FLOCK, T_FLOCK, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_SWIRL, T_SWIRL, swirlRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_DRIFT, T_DRIFT, incrementalDriftRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_DRIFT2, T_DRIFT2, incrementalDriftRoutine2, nullptr},
@@ -332,12 +331,6 @@ static EFFECT _EFFECTS_ARR[] = {
 #endif
 };
 
-#define bballsMaxNUM_BALLS     (16U)                // максимальное количество мячиков прикручено при адаптации для бегунка Масштаб
-#define BALLS_AMOUNT           (7U)                 // максимальное количество "шариков"
-#define LIGHTERS_AM            (64U)                // светлячки
-#define NUM_LAYERS             (1U)                 // The coordinates for 3 16-bit noise spaces.
-#define NUM_LAYERS2            (2U)                 // The coordinates for 3 16-bit noise spaces.
-#define AVAILABLE_BOID_COUNT   (10U)                // стая, кол-во птиц
 class SHARED_MEM {
 public:
     union {
@@ -434,6 +427,7 @@ public:
             uint8_t noise3d[NUM_LAYERS][WIDTH][HEIGHT];
             //uint8_t ledsbuff[sizeof(CRGB)* NUM_LEDS];
         };
+/*
         struct { // стая
             bool predatorPresent;
             uint8_t hueoffset;
@@ -441,6 +435,7 @@ public:
             char wind[sizeof(PVector)];
             char boids[sizeof(Boid)*AVAILABLE_BOID_COUNT];
 		};
+*/
         struct { // будильник "рассвет"
             uint8_t dawnCounter;                                           // счётчик первых шагов будильника
             time_t startmillis;
@@ -859,6 +854,22 @@ private:
   byte spirohueoffset = 0;
 
   bool prismataRoutine(CRGB *leds, const char *param);
+
+public:
+    void load() override;
+    bool run(CRGB *ledarr, const char *opt=nullptr) override;
+};
+
+class EffectFlock : public EffectCalc {
+private:
+  Boid boids[AVAILABLE_BOID_COUNT];
+  Boid predator;
+  PVector wind;
+
+  bool predatorPresent;
+  uint8_t hueoffset;
+
+  bool flockRoutine(CRGB *leds, const char *param);
 
 public:
     void load() override;

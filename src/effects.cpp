@@ -1799,110 +1799,88 @@ bool EffectPrismata::prismataRoutine(CRGB *leds, const char *param)
 // Boid GSHMEM.predator;
 // PVector GSHMEM.wind;
 // bool GSHMEM.predatorPresent = true;
+void EffectFlock::load(){
+  palettesload();    // подгружаем дефолтные палитры
+  scalerefresh();    // выбираем палитру согласно "шкале"
 
-void flockRoutine(CRGB *leds, const char *param) {
-  const TProgmemRGBPalette16 *palette_arr[] = {&PartyColors_p, &OceanColors_p, &LavaColors_p, &HeatColors_p, &WaterfallColors_p, &CloudColors_p, &ForestColors_p, &RainbowColors_p, &RainbowStripeColors_p};
-  TProgmemRGBPalette16 const *curPalette;
-  uint8_t palleteCnt = sizeof(palette_arr)/sizeof(TProgmemRGBPalette16 *); // кол-во палитр
-  float ptPallete; // сколько пунктов приходится на одну палитру; 255.1 - диапазон ползунка, не включая 255, т.к. растягиваем только нужное :)
-  uint8_t pos; // позиция в массиве указателей паллитр
-  uint8_t curVal; // curVal == либо var как есть, либо getScale
-  String var = myLamp.effects.getCurrent()->getValue(myLamp.effects.getCurrent()->param, F("R"));
-  if(!var.isEmpty()){
-    ptPallete = 255.1/palleteCnt; // сколько пунктов приходится на одну палитру; 255.1 - диапазон ползунка, не включая 255, т.к. растягиваем только нужное :)
-    pos = (uint8_t)(var.toFloat()/ptPallete); // для 9 палитр будет 255.1/9==28.34, как следствие ползунок/28.34, при 1...28 будет давать 0, 227...255 -> 8
-    curVal = var.toInt();
-  } else {
-    ptPallete = 255.1/palleteCnt; // сколько пунктов приходится на одну палитру; 255.1 - диапазон ползунка, не включая 255, т.к. растягиваем только нужное :)
-    pos = (uint8_t)((float)myLamp.effects.getScale()/ptPallete);
-    curVal = myLamp.effects.getScale();
+  FastLED.clear();
+  for (uint8_t i = 0; i < AVAILABLE_BOID_COUNT; i++) {
+    boids[i] = Boid(15, 15);
+    boids[i].maxspeed = 0.380*myLamp.effects.getSpeed()/127.0+0.380/2;
+    boids[i].maxforce = 0.015*myLamp.effects.getSpeed()/127.0+0.015/2;
   }
-  curPalette = palette_arr[pos]; // выбираем из доп. регулятора
-  uint8_t scale = curVal-ptPallete*pos; // разбиваю на поддиапазоны внутри диапазона, будет уходить в 0 на крайней позиции поддиапазона, ну и хрен с ним :), хотя нужно помнить!
+  predatorPresent = random(0, 2) >= 1;
+  if (predatorPresent) {
+    predator = Boid(31, 31);
+    predatorPresent = true;
+    predator.maxspeed = 0.385*myLamp.effects.getSpeed()/127.0+0.385/2;
+    predator.maxforce = 0.020*myLamp.effects.getSpeed()/127.0+0.020/2;
+    predator.neighbordist = 8.0;
+    predator.desiredseparation = 0.0;
+  }
 
-  Boid boids[AVAILABLE_BOID_COUNT];
-  Boid predator;
-  PVector wind;
-  memcpy(boids,GSHMEM.boids,sizeof(Boid)*AVAILABLE_BOID_COUNT);
-  memcpy(&predator,GSHMEM.predator,sizeof(Boid));
-  memcpy(&wind,GSHMEM.wind,sizeof(PVector));
+}
 
-    if (myLamp.isLoading())
-    {
-      FastLED.clear();
+bool EffectFlock::run(CRGB *ledarr, const char *opt){
+  /**
+   * дергаем костыль раз в секунду для обвления палитры/шкалы
+   */
+  EVERY_N_SECONDS(1){
+    scalerefresh();
+  }
+  return flockRoutine(*&ledarr, &*opt);
+}
 
-      for (uint8_t i = 0; i < AVAILABLE_BOID_COUNT; i++) {
-        boids[i] = Boid(15, 15);
-        boids[i].maxspeed = 0.380*myLamp.effects.getSpeed()/127.0+0.380/2;
-        boids[i].maxforce = 0.015*myLamp.effects.getSpeed()/127.0+0.015/2;
-      }
-      GSHMEM.predatorPresent = random(0, 2) >= 1;
-      if (GSHMEM.predatorPresent) {
-        predator = Boid(31, 31);
-        GSHMEM.predatorPresent = true;
-        predator.maxspeed = 0.385*myLamp.effects.getSpeed()/127.0+0.385/2;
-        predator.maxforce = 0.020*myLamp.effects.getSpeed()/127.0+0.020/2;
-        predator.neighbordist = 8.0;
-        predator.desiredseparation = 0.0;
-      }
-    }
-    
-      myLamp.blur2d(15);
-      myLamp.dimAll(254U - scale);
+bool EffectFlock::flockRoutine(CRGB *leds, const char *param) {
+  if (curPalette == nullptr) {
+    return false;
+  }
 
-      bool applyWind = random(0, 255) > 240;
-      if (applyWind) {
-        wind.x = Boid::randomf() * .015 * myLamp.effects.getSpeed()/127.0 + .015/2;
-        wind.y = Boid::randomf() * .015 * myLamp.effects.getSpeed()/127.0 + .015/2;
-      }
-
-      CRGB color = ColorFromPalette(*curPalette, GSHMEM.hueoffset);
-      
-
-      for (uint8_t i = 0; i < AVAILABLE_BOID_COUNT; i++) {
-        Boid * boid = &boids[i];
-
-        if (GSHMEM.predatorPresent) {
+  myLamp.blur2d(15);
+  myLamp.dimAll(254U - scale);
+  bool applyWind = random(0, 255) > 240;
+  if (applyWind) {
+    wind.x = Boid::randomf() * .015 * myLamp.effects.getSpeed()/127.0 + .015/2;
+    wind.y = Boid::randomf() * .015 * myLamp.effects.getSpeed()/127.0 + .015/2;
+  }
+  CRGB color = ColorFromPalette(*curPalette, hueoffset);
+  
+  for (uint8_t i = 0; i < AVAILABLE_BOID_COUNT; i++) {
+    Boid * boid = &boids[i];
+    if (predatorPresent) {
           // flee from predator
           boid->repelForce(predator.location, 8);
         }
-
-        boid->run(boids, AVAILABLE_BOID_COUNT);
-        boid->wrapAroundBorders();
-        PVector location = boid->location;
-        // PVector velocity = boid->velocity;
+    boid->run(boids, AVAILABLE_BOID_COUNT);
+    boid->wrapAroundBorders();
+    PVector location = boid->location;
+    // PVector velocity = boid->velocity;
         // backgroundLayer.drawLine(location.x, location.y, location.x - velocity.x, location.y - velocity.y, color);
         // effects.leds[XY(location.x, location.y)] += color;
-        myLamp.drawPixelXY(location.x, location.y, color);        
-
-        if (applyWind) {
+    myLamp.drawPixelXY(location.x, location.y, color);        
+    if (applyWind) {
           boid->applyForce(wind);
           applyWind = false;
         }
-      }
-
-      if (GSHMEM.predatorPresent) {
-        predator.run(boids, AVAILABLE_BOID_COUNT);
-        predator.wrapAroundBorders();
-        color = ColorFromPalette(*curPalette, GSHMEM.hueoffset + 128);
-        PVector location = predator.location;
-        // PVector velocity = predator.velocity;
+  }
+  if (predatorPresent) {
+    predator.run(boids, AVAILABLE_BOID_COUNT);
+    predator.wrapAroundBorders();
+    color = ColorFromPalette(*curPalette, hueoffset + 128);
+    PVector location = predator.location;
+    // PVector velocity = predator.velocity;
         // backgroundLayer.drawLine(location.x, location.y, location.x - velocity.x, location.y - velocity.y, color);
         // effects.leds[XY(location.x, location.y)] += color;        
-        myLamp.drawPixelXY(location.x, location.y, color);        
+    myLamp.drawPixelXY(location.x, location.y, color);        
+  }
+  EVERY_N_MILLIS(333) {
+        hueoffset += 1;
+  }
+  
+  EVERY_N_SECONDS(30) {
+        predatorPresent = !predatorPresent;
       }
-
-      EVERY_N_MILLIS(333) {
-        GSHMEM.hueoffset += 1;
-      }
-      
-      EVERY_N_SECONDS(30) {
-        GSHMEM.predatorPresent = !GSHMEM.predatorPresent;
-      }
-
-      memcpy(GSHMEM.predator,&predator,sizeof(Boid));
-      memcpy(GSHMEM.wind,&wind,sizeof(PVector));
-      memcpy(GSHMEM.boids,boids,sizeof(Boid)*AVAILABLE_BOID_COUNT);
+  return true;
 }
 
 // ============= SWIRL /  ВОДОВОРОТ ===============
@@ -3455,6 +3433,9 @@ void multipleStreamSmokeRoutine(CRGB *leds, const char *param)
 void EffectWorker::workerset(EFF_ENUM effect){
   switch (effect)
   {
+  case EFF_ENUM::EFF_FLOCK :
+    worker = std::unique_ptr<EffectFlock>(new EffectFlock());
+    break;
   case EFF_ENUM::EFF_PRIZMATA :
     worker = std::unique_ptr<EffectPrismata>(new EffectPrismata());
     break;

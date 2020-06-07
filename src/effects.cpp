@@ -183,31 +183,15 @@ bool EffectSparcles::sparklesRoutine(CRGB *leds, const char *param)
   return true;
 }
 
-// ------------- белый свет -------------
-void whiteColorRoutine(CRGB *leds, const char *param)
-{
-  if (myLamp.isLoading())
-  {
-    FastLED.clear();
-
-    for (uint16_t i = 0U; i < NUM_LEDS; i++)
-    {
-      myLamp.setLeds(i, CHSV(0U, 0U, 255U));
-    }
-  }
+// ------------- белый свет (светится горизонтальная полоса по центру лампы; масштаб - высота центральной горизонтальной полосы; скорость - регулировка от холодного к тёплому; яркость - общая яркость) -------------
+bool EffectWhiteColorStripe::run(CRGB *ledarr, const char *opt){
+  // if (dryrun()) // для этого эффекта задержка не нужна в общем-то...
+  //   return false;
+  return whiteColorStripeRoutine(*&ledarr, &*opt);
 }
 
-// ------------- белый свет (светится горизонтальная полоса по центру лампы; масштаб - высота центральной горизонтальной полосы; скорость - регулировка от холодного к тёплому; яркость - общая яркость) -------------
-void whiteColorStripeRoutine(CRGB *leds, const char *param)
+bool EffectWhiteColorStripe::whiteColorStripeRoutine(CRGB *leds, const char *param)
 {
-    // //if((millis() - myLamp.getEffDelay() - EFFECTS_RUN_TIMER) < (unsigned)(255-myLamp.effects.getSpeed())){
-    // if((millis() - myLamp.getEffDelay() - EFFECTS_RUN_TIMER) < 200){
-    //   FastLED.show(); // борьба с мерцанием на белом цвете...
-    //   return;
-    // } else {
-    //   myLamp.setEffDelay(millis());
-    // }
-
     if(myLamp.effects.getScale()<127){
         uint8_t centerY = max((uint8_t)round(HEIGHT / 2.0F) - 1, 0);
         uint8_t bottomOffset = (uint8_t)(!(HEIGHT & 1) && (HEIGHT > 1));                      // если высота матрицы чётная, линий с максимальной яркостью две, а линии с минимальной яркостью снизу будут смещены на один ряд
@@ -251,6 +235,7 @@ void whiteColorStripeRoutine(CRGB *leds, const char *param)
           }
         }
     }
+  return true;
 }
 
 // ============= водо/огне/лава/радуга/хренопад ===============
@@ -3396,7 +3381,10 @@ void multipleStreamSmokeRoutine(CRGB *leds, const char *param)
 void EffectWorker::workerset(EFF_ENUM effect){
 
   switch (effect)
-  {
+  { 
+  case EFF_ENUM::EFF_WHITE_COLOR :
+    worker = std::unique_ptr<EffectWhiteColorStripe>(new EffectWhiteColorStripe());
+    break;
   case EFF_ENUM::EFF_MATRIX :
     worker = std::unique_ptr<EffectMatrix>(new EffectMatrix());
     break;

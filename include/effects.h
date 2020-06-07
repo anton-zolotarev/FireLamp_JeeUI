@@ -107,7 +107,7 @@ EFF_TIME = (98)                               // Часы (служебный, �
 void stubRoutine(CRGB *, const char *);
 //void sparklesRoutine(CRGB*, const char*);
 void fireRoutine(CRGB*, const char*);
-void whiteColorStripeRoutine(CRGB*, const char*);
+// void whiteColorStripeRoutine(CRGB*, const char*);
 //void fire2012WithPalette(CRGB*, const char*);
 void pulseRoutine(CRGB*, const char*);
 void rainbowDiagonalRoutine(CRGB*, const char*);
@@ -277,7 +277,8 @@ const char T_FREQ[] PROGMEM = "Частотный анализатор";
 
 static EFFECT _EFFECTS_ARR[] = {
     {false, false, 127, 127, 127, EFF_NONE, nullptr, nullptr, nullptr},
-    {true, true, 127, 127, 127, EFF_WHITE_COLOR, T_WHITE_COLOR, whiteColorStripeRoutine, nullptr},
+    {true, true, 127, 127, 127, EFF_WHITE_COLOR, T_WHITE_COLOR, stubRoutine, nullptr},
+    // {true, true, 127, 127, 127, EFF_WHITE_COLOR, T_WHITE_COLOR, whiteColorStripeRoutine, nullptr},
 
     {true, true, 127, 127, 127, EFF_COLORS, T_COLORS, colorsRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_RAINBOW_2D, T_RAINBOW_2D, rainbowDiagonalRoutine, nullptr},
@@ -595,6 +596,14 @@ public:
      * деструктор по-умолчанию пустой, может быть переопределен
      */
     virtual ~EffectCalc() = default;
+};
+
+class EffectWhiteColorStripe : public EffectCalc {
+private:
+    bool whiteColorStripeRoutine(CRGB *leds, const char *param);
+
+public:
+    bool run(CRGB *ledarr, const char *opt=nullptr) override;
 };
 
 class EffectMatrix : public EffectCalc {

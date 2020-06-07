@@ -1305,7 +1305,11 @@ bool EffectSinusoid3::sinusoid3Routine(CRGB *leds, const char *param)
 
 // ***** METABALLS / МЕТАШАРИКИ *****
 // v1.7.0 - Updating for GuverLamp v1.7 by PalPalych 12.03.2020
-void metaBallsRoutine(CRGB *leds, const char *param)
+bool EffectMetaBalls::run(CRGB *ledarr, const char *opt){
+  return metaBallsRoutine(*&ledarr, &*opt);
+}
+
+bool EffectMetaBalls::metaBallsRoutine(CRGB *leds, const char *param)
 {
   float speed = myLamp.effects.getSpeed()/127.0;
 
@@ -1352,6 +1356,7 @@ void metaBallsRoutine(CRGB *leds, const char *param)
       myLamp.drawPixelXY(x3, y3, CRGB(255, 255, 255));
     }
   }
+  return true;
 }
 
 // --------------------------- эффект спирали ----------------------
@@ -3424,6 +3429,9 @@ void multipleStreamSmokeRoutine(CRGB *leds, const char *param)
 void EffectWorker::workerset(EFF_ENUM effect){
   switch (effect)
   {
+  case EFF_ENUM::EFF_METABALLS :
+    worker = std::unique_ptr<EffectMetaBalls>(new EffectMetaBalls());
+    break;
   case EFF_ENUM::EFF_SINUSOID3 :
     worker = std::unique_ptr<EffectSinusoid3>(new EffectSinusoid3());
     break;

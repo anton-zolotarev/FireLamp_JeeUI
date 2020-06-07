@@ -285,9 +285,9 @@ static EFFECT _EFFECTS_ARR[] = {
     {true, true, 127, 127, 127, EFF_SNOWSTORMSTARFALL, T_SNOWSTORMSTARFALL, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_MATRIX, T_MATRIX, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_LIGHTERS, T_LIGHTERS, stubRoutine, nullptr},
-    //{true, true, 127, 127, 127, EFF_LIGHTER_TRACES, T_LIGHTER_TRACES, ballsRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_LIGHTER_TRACES, T_LIGHTER_TRACES, stubRoutine, nullptr},
-    {true, true, 127, 127, 127, EFF_CUBE, T_CUBE, ballRoutine, nullptr},
+    //{true, true, 127, 127, 127, EFF_CUBE, T_CUBE, ballRoutine, nullptr},
+    {true, true, 127, 127, 127, EFF_CUBE, T_CUBE, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_PULSE, T_PULSE, pulseRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_EVERYTHINGFALL, T_EVERYTHINGFALL, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_FIRE, T_FIRE, fireRoutine, nullptr},
@@ -591,7 +591,14 @@ public:
     virtual ~EffectCalc() = default;
 };
 
-//{true, true, 127, 127, 127, EFF_LIGHTER_TRACES, T_LIGHTER_TRACES, ballsRoutine, nullptr},
+class EffectBall : public EffectCalc {
+private:
+    bool ballRoutine(CRGB *leds, const char *param);
+
+public:
+    bool run(CRGB *ledarr, const char *opt=nullptr) override;
+};
+
 class EffectLighterTracers : public EffectCalc {
 private:
     bool lighterTracersRoutine(CRGB *leds, const char *param);

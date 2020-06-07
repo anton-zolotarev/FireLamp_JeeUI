@@ -892,8 +892,11 @@ void lightBallsRoutine(CRGB *leds, const char *param)
 }
 
 // ------------- блуждающий кубик -------------
+bool EffectBall::run(CRGB *ledarr, const char *opt){
+  return ballRoutine(*&ledarr, &*opt);
+}
 #define RANDOM_COLOR          (1U)                          // случайный цвет при отскоке
-void ballRoutine(CRGB *leds, const char *param)
+bool EffectBall::ballRoutine(CRGB *leds, const char *param)
 {
   // static float GSHMEM.coordB[2U];
   // static int8_t GSHMEM.vectorB[2U];
@@ -961,6 +964,7 @@ void ballRoutine(CRGB *leds, const char *param)
       myLamp.setLeds(myLamp.getPixelNumber((int8_t)GSHMEM.coordB[0U] + i, (int8_t)GSHMEM.coordB[1U] + j), CHSV(GSHMEM.ballColor, 255U, 255U));
     }
   }
+  return true;
 }
 
 //-- 3D Noise эффектцы --------------
@@ -3401,6 +3405,9 @@ void EffectWorker::workerset(EFF_ENUM effect){
 
   switch (effect)
   {
+  case EFF_ENUM::EFF_CUBE :
+    worker = std::unique_ptr<EffectBall>(new EffectBall());
+    break;
   case EFF_ENUM::EFF_LIGHTER_TRACES :
     worker = std::unique_ptr<EffectLighterTracers>(new EffectLighterTracers());
     break;

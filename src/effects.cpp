@@ -249,31 +249,15 @@ bool EffectSparcles::sparklesRoutine(CRGB *leds, const char *param)
   return true;
 }
 
-// ------------- белый свет -------------
-void whiteColorRoutine(CRGB *leds, const char *param)
-{
-  if (myLamp.isLoading())
-  {
-    FastLED.clear();
-
-    for (uint16_t i = 0U; i < NUM_LEDS; i++)
-    {
-      myLamp.setLeds(i, CHSV(0U, 0U, 255U));
-    }
-  }
+// ------------- белый свет (светится горизонтальная полоса по центру лампы; масштаб - высота центральной горизонтальной полосы; скорость - регулировка от холодного к тёплому; яркость - общая яркость) -------------
+bool EffectWhiteColorStripe::run(CRGB *ledarr, const char *opt){
+  // if (dryrun()) // для этого эффекта задержка не нужна в общем-то...
+  //   return false;
+  return whiteColorStripeRoutine(*&ledarr, &*opt);
 }
 
-// ------------- белый свет (светится горизонтальная полоса по центру лампы; масштаб - высота центральной горизонтальной полосы; скорость - регулировка от холодного к тёплому; яркость - общая яркость) -------------
-void whiteColorStripeRoutine(CRGB *leds, const char *param)
+bool EffectWhiteColorStripe::whiteColorStripeRoutine(CRGB *leds, const char *param)
 {
-    // //if((millis() - myLamp.getEffDelay() - EFFECTS_RUN_TIMER) < (unsigned)(255-myLamp.effects.getSpeed())){
-    // if((millis() - myLamp.getEffDelay() - EFFECTS_RUN_TIMER) < 200){
-    //   FastLED.show(); // борьба с мерцанием на белом цвете...
-    //   return;
-    // } else {
-    //   myLamp.setEffDelay(millis());
-    // }
-
     if(myLamp.effects.getScale()<127){
         uint8_t centerY = max((uint8_t)round(HEIGHT / 2.0F) - 1, 0);
         uint8_t bottomOffset = (uint8_t)(!(HEIGHT & 1) && (HEIGHT > 1));                      // если высота матрицы чётная, линий с максимальной яркостью две, а линии с минимальной яркостью снизу будут смещены на один ряд
@@ -317,6 +301,7 @@ void whiteColorStripeRoutine(CRGB *leds, const char *param)
           }
         }
     }
+  return true;
 }
 
 // ============= водо/огне/лава/радуга/хренопад ===============
@@ -388,6 +373,11 @@ bool EffectEverythingFall::fire2012WithPalette(CRGB*leds, const char *param) {
 
 // --------------------------- эффект пульс ----------------------
 // Stefan Petrick's PULSE Effect mod by PalPalych for GyverLamp 
+bool EffectPulse::run(CRGB *ledarr, const char *opt){
+  if (dryrun())
+    return false;
+  return pulseRoutine(*&ledarr, &*opt);
+}
 
 void drawCircle(int16_t x0, int16_t y0, uint16_t radius, const CRGB & color){
   int a = radius, b = 0;
@@ -420,12 +410,12 @@ void drawCircle(int16_t x0, int16_t y0, uint16_t radius, const CRGB & color){
 
 // uint8_t GSHMEM.pulse_hue;
 // uint8_t GSHMEM.pulse_step = 0;
-void pulseRoutine(CRGB *leds, const char *param) {
-    if((millis() - myLamp.getEffDelay() - EFFECTS_RUN_TIMER) < (unsigned)(255-myLamp.effects.getSpeed())){
-      return;
-    } else {
-      myLamp.setEffDelay(millis());
-    }
+bool EffectPulse::pulseRoutine(CRGB *leds, const char *param) {
+    // if((millis() - myLamp.getEffDelay() - EFFECTS_RUN_TIMER) < (unsigned)(255-myLamp.effects.getSpeed())){
+    //   return;
+    // } else {
+    //   myLamp.setEffDelay(millis());
+    // }
 
   if(myLamp.isLoading()){
 	GSHMEM.pulse_step = 0;
@@ -497,6 +487,7 @@ void pulseRoutine(CRGB *leds, const char *param) {
     GSHMEM.pulse_step = 0;
   }
   GSHMEM.pulse_step++;
+  return true;
 }
 
 // радуги 2D
@@ -520,7 +511,13 @@ void rainbowHorVertRoutine(bool isVertical)
 }
 
 // ------------- радуга диагональная -------------
-void rainbowDiagonalRoutine(CRGB *leds, const char *param) 
+bool EffectRainbow::run(CRGB *ledarr, const char *opt){
+  // if (dryrun())
+  //   return false;
+  return rainbowDiagonalRoutine(*&ledarr, &*opt);
+}
+
+bool EffectRainbow::rainbowDiagonalRoutine(CRGB *leds, const char *param) 
 {
   if((millis() - myLamp.getEffDelay() - EFFECTS_RUN_TIMER)
 #ifdef MIC_EFFECTS
@@ -528,17 +525,17 @@ void rainbowDiagonalRoutine(CRGB *leds, const char *param)
 #else
     < (unsigned)(255-myLamp.effects.getSpeed())){
 #endif
-    return;
+    return false;
   } else {
     myLamp.setEffDelay(millis());
   }
 
   if(myLamp.effects.getScale()<85){
     rainbowHorVertRoutine(false);
-    return;
+    return true;
   } else if (myLamp.effects.getScale()>170){
     rainbowHorVertRoutine(true);
-    return;
+    return true;
   }
 
   GSHMEM.hue += 4;
@@ -554,10 +551,17 @@ void rainbowDiagonalRoutine(CRGB *leds, const char *param)
       myLamp.drawPixelXY(i, j, thisColor);
     }
   }
+  return true;
 }
 
 // ------------- цвета -----------------
-void colorsRoutine(CRGB *leds, const char *param)
+bool EffectColors::run(CRGB *ledarr, const char *opt){
+  // if (dryrun())
+  //   return false;
+  return colorsRoutine(*&ledarr, &*opt);
+}
+
+bool EffectColors::colorsRoutine(CRGB *leds, const char *param)
 {
   static unsigned int step = 0; // доп. задержка
   unsigned int delay = (myLamp.effects.getSpeed()==1)?4294967294:255-myLamp.effects.getSpeed()+1; // на скорости 1 будет очень долгое ожидание)))
@@ -612,6 +616,7 @@ EVERY_N_SECONDS(1){
       GSHMEM.ihue += myLamp.effects.getScale(); // смещаемся на следущий
     }
   }
+  return true;
 }
 
 // ------------- матрица ---------------
@@ -847,11 +852,15 @@ bool EffectLighters::lightersRoutine(CRGB *leds, const char *param)
 }
 
 // ------------- светлячки со шлейфом -------------
+bool EffectLighterTracers::run(CRGB *ledarr, const char *opt){
+  return lighterTracersRoutine(*&ledarr, &*opt);
+}
+
 //#define BALLS_AMOUNT          (7U)                          // максимальное количество "шариков"
 #define CLEAR_PATH            (1U)                          // очищать путь
 #define BALL_TRACK            (1U)                          // (0 / 1) - вкл/выкл следы шариков
 #define TRACK_STEP            (70U)                         // длина хвоста шарика (чем больше цифра, тем хвост короче)
-void ballsRoutine(CRGB *leds, const char *param)
+bool EffectLighterTracers::lighterTracersRoutine(CRGB *leds, const char *param)
 {
   // static int16_t GSHMEM.coord[BALLS_AMOUNT][2U];
   // static int8_t GSHMEM.vector[BALLS_AMOUNT][2U];
@@ -921,11 +930,16 @@ void ballsRoutine(CRGB *leds, const char *param)
     }
     myLamp.setLeds(myLamp.getPixelNumber(GSHMEM.coord[j][0U], GSHMEM.coord[j][1U]), CHSV(ballColors[j], 255U, 255U));
   }
+  return true;
 }
 
 // ------------- пейнтбол -------------
+bool EffectLightBalls::run(CRGB *ledarr, const char *opt){
+  return lightBallsRoutine(*&ledarr, &*opt);
+}
+
 #define BORDERTHICKNESS       (1U)                          // глубина бордюра для размытия яркой частицы: 0U - без границы (резкие края); 1U - 1 пиксель (среднее размытие) ; 2U - 2 пикселя (глубокое размытие)
-void lightBallsRoutine(CRGB *leds, const char *param)
+bool EffectLightBalls::lightBallsRoutine(CRGB *leds, const char *param)
 {
   const uint8_t paintWidth = WIDTH - BORDERTHICKNESS * 2;
   const uint8_t paintHeight = HEIGHT - BORDERTHICKNESS * 2;
@@ -951,11 +965,16 @@ void lightBallsRoutine(CRGB *leds, const char *param)
   leds[myLamp.getPixelNumber( highByte(j * paintWidth) + BORDERTHICKNESS, highByte(k * paintHeight) + BORDERTHICKNESS)] += CHSV( ms / 41, 200U, 255U);
   leds[myLamp.getPixelNumber( highByte(k * paintWidth) + BORDERTHICKNESS, highByte(m * paintHeight) + BORDERTHICKNESS)] += CHSV( ms / 37, 200U, 255U);
   leds[myLamp.getPixelNumber( highByte(m * paintWidth) + BORDERTHICKNESS, highByte(i * paintHeight) + BORDERTHICKNESS)] += CHSV( ms / 53, 200U, 255U);
+
+  return true;
 }
 
 // ------------- блуждающий кубик -------------
+bool EffectBall::run(CRGB *ledarr, const char *opt){
+  return ballRoutine(*&ledarr, &*opt);
+}
 #define RANDOM_COLOR          (1U)                          // случайный цвет при отскоке
-void ballRoutine(CRGB *leds, const char *param)
+bool EffectBall::ballRoutine(CRGB *leds, const char *param)
 {
   // static float GSHMEM.coordB[2U];
   // static int8_t GSHMEM.vectorB[2U];
@@ -1023,6 +1042,7 @@ void ballRoutine(CRGB *leds, const char *param)
       myLamp.setLeds(myLamp.getPixelNumber((int8_t)GSHMEM.coordB[0U] + i, (int8_t)GSHMEM.coordB[1U] + j), CHSV(GSHMEM.ballColor, 255U, 255U));
     }
   }
+  return true;
 }
 
 //-- 3D Noise эффектцы --------------
@@ -1218,11 +1238,15 @@ bool Effect3DNoise::run(CRGB *ledarr, const char *opt){
 //  https://github.com/githubcdr/Arduino/blob/master/bouncingballs/bouncingballs.ino
 //  With BIG thanks to the FastLED community!
 //  адаптация от SottNick
+bool EffectBBalls::run(CRGB *ledarr, const char *opt){
+  return bBallsRoutine(*&ledarr, &*opt);
+}
+
 #define bballsGRAVITY           (-10)              // Downward (negative) acceleration of gravity in m/s^2
 #define bballsH0                (2)                  // Starting height, in meters, of the ball (strip length)
 #define bballsVImpact0          (sqrt(-2 * bballsGRAVITY * bballsH0))
 //#define bballsMaxNUM_BALLS      (16U)                // максимальное количество мячиков прикручено при адаптации для бегунка Масштаб
-void BBallsRoutine(CRGB *leds, const char *param)
+bool EffectBBalls::bBallsRoutine(CRGB *leds, const char *param)
 {
   uint8_t bballsNUM_BALLS;                             // Number of bouncing balls you want (recommend < 7, but 20 is fun in its own way) ... количество мячиков теперь задаётся бегунком, а не константой
   bballsNUM_BALLS =  map(myLamp.effects.getScale(), 0, 255, 1, bballsMaxNUM_BALLS);
@@ -1280,6 +1304,7 @@ void BBallsRoutine(CRGB *leds, const char *param)
     }
     myLamp.setLeds(myLamp.getPixelNumber(GSHMEM.bballsX[i], GSHMEM.bballsPos[i]), CHSV(GSHMEM.bballsCOLOR[i], 255, 255));
   }
+  return true;
 }
 
 // ***** SINUSOID3 / СИНУСОИД3 *****
@@ -1288,7 +1313,11 @@ void BBallsRoutine(CRGB *leds, const char *param)
   Sinusoid3 by Stefan Petrick (mod by Palpalych for GyverLamp 27/02/2020)
   read more about the concept: https://www.youtube.com/watch?v=mubH-w_gwdA
 */
-void Sinusoid3Routine (CRGB *leds, const char *param)
+bool EffectSinusoid3::run(CRGB *ledarr, const char *opt){
+  return sinusoid3Routine(*&ledarr, &*opt);
+}
+
+bool EffectSinusoid3::sinusoid3Routine(CRGB *leds, const char *param)
 {
   const uint8_t semiHeightMajor =  HEIGHT / 2 + (HEIGHT % 2);
   const uint8_t semiWidthMajor =  WIDTH / 2  + (WIDTH % 2) ;
@@ -1330,6 +1359,7 @@ void Sinusoid3Routine (CRGB *leds, const char *param)
       myLamp.drawPixelXY(x, y, color);
     }
   }
+  return true;
 }
 
 /*
@@ -1341,7 +1371,11 @@ void Sinusoid3Routine (CRGB *leds, const char *param)
 
 // ***** METABALLS / МЕТАШАРИКИ *****
 // v1.7.0 - Updating for GuverLamp v1.7 by PalPalych 12.03.2020
-void metaBallsRoutine(CRGB *leds, const char *param)
+bool EffectMetaBalls::run(CRGB *ledarr, const char *opt){
+  return metaBallsRoutine(*&ledarr, &*opt);
+}
+
+bool EffectMetaBalls::metaBallsRoutine(CRGB *leds, const char *param)
 {
   float speed = myLamp.effects.getSpeed()/127.0;
 
@@ -1388,6 +1422,7 @@ void metaBallsRoutine(CRGB *leds, const char *param)
       myLamp.drawPixelXY(x3, y3, CRGB(255, 255, 255));
     }
   }
+  return true;
 }
 
 // --------------------------- эффект спирали ----------------------
@@ -2435,8 +2470,6 @@ const TProgmemRGBPalette16 *firePalettes[] = {
   // Lower = more blending and smoother flames. Higher = less blending and flickery flames
   uint8_t fireSmoothing = 80*2.0*myLamp.effects.getSpeed()/255.0+10;
   //const uint8_t fireSmoothing =90; // random8(50, 120); //map(myLamp.effects.getSpeed(), 1, 255, 20, 100);
-  // Add entropy to random number generator; we use a lot of it.
-  random16_add_entropy(random(256));
 
   // Loop for each column individually
   for (uint8_t x = 0; x < WIDTH; x++)
@@ -3432,9 +3465,44 @@ void multipleStreamSmokeRoutine(CRGB *leds, const char *param)
  * Создаем экземпляр класса калькулятора в зависимости от требуемого эффекта
  */
 void EffectWorker::workerset(EFF_ENUM effect){
-
   switch (effect)
   {
+  case EFF_ENUM::EFF_SPIRO :
+    worker = std::unique_ptr<EffectSpiro>(new EffectSpiro());
+    break;
+  case EFF_ENUM::EFF_METABALLS :
+    worker = std::unique_ptr<EffectMetaBalls>(new EffectMetaBalls());
+    break;
+  case EFF_ENUM::EFF_SINUSOID3 :
+    worker = std::unique_ptr<EffectSinusoid3>(new EffectSinusoid3());
+    break;
+  case EFF_ENUM::EFF_BBALS :
+    worker = std::unique_ptr<EffectBBalls>(new EffectBBalls());
+    break;
+  case EFF_ENUM::EFF_PAINTBALL :
+    worker = std::unique_ptr<EffectLightBalls>(new EffectLightBalls());
+    break;
+  case EFF_ENUM::EFF_FIRE :
+    worker = std::unique_ptr<EffectFire>(new EffectFire());
+    break;
+  case EFF_ENUM::EFF_PULSE :
+    worker = std::unique_ptr<EffectPulse>(new EffectPulse());
+    break;
+  case EFF_ENUM::EFF_CUBE :
+    worker = std::unique_ptr<EffectBall>(new EffectBall());
+    break;
+  case EFF_ENUM::EFF_LIGHTER_TRACES :
+    worker = std::unique_ptr<EffectLighterTracers>(new EffectLighterTracers());
+    break;
+  case EFF_ENUM::EFF_RAINBOW_2D :
+    worker = std::unique_ptr<EffectRainbow>(new EffectRainbow());
+    break;
+  case EFF_ENUM::EFF_COLORS :
+    worker = std::unique_ptr<EffectColors>(new EffectColors());
+    break;
+  case EFF_ENUM::EFF_WHITE_COLOR :
+    worker = std::unique_ptr<EffectWhiteColorStripe>(new EffectWhiteColorStripe());
+    break;
   case EFF_ENUM::EFF_MATRIX :
     worker = std::unique_ptr<EffectMatrix>(new EffectMatrix());
     break;

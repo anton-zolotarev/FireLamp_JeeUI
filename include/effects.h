@@ -107,11 +107,11 @@ EFF_TIME = (98)                               // Часы (служебный, �
 void stubRoutine(CRGB *, const char *);
 //void sparklesRoutine(CRGB*, const char*);
 void fireRoutine(CRGB*, const char*);
-void whiteColorStripeRoutine(CRGB*, const char*);
+// void whiteColorStripeRoutine(CRGB*, const char*);
 //void fire2012WithPalette(CRGB*, const char*);
 void pulseRoutine(CRGB*, const char*);
 void rainbowDiagonalRoutine(CRGB*, const char*);
-void colorsRoutine(CRGB*, const char*);
+// void colorsRoutine(CRGB*, const char*);
 // void matrixRoutine(CRGB*, const char*);
 // void snowRoutine(CRGB*, const char*);
 //void snowStormStarfallRoutine(CRGB*, const char*);
@@ -277,28 +277,20 @@ const char T_FREQ[] PROGMEM = "Частотный анализатор";
 
 static EFFECT _EFFECTS_ARR[] = {
     {false, false, 127, 127, 127, EFF_NONE, nullptr, nullptr, nullptr},
-    {true, true, 127, 127, 127, EFF_WHITE_COLOR, T_WHITE_COLOR, whiteColorStripeRoutine, nullptr},
-
-    {true, true, 127, 127, 127, EFF_COLORS, T_COLORS, colorsRoutine, nullptr},
-    {true, true, 127, 127, 127, EFF_RAINBOW_2D, T_RAINBOW_2D, rainbowDiagonalRoutine, nullptr},
-//    {true, true, 127, 127, 127, EFF_SPARKLES, T_SPARKLES, sparklesRoutine, nullptr},
+    {true, true, 127, 127, 127, EFF_WHITE_COLOR, T_WHITE_COLOR, stubRoutine, nullptr},
+    {true, true, 127, 127, 127, EFF_COLORS, T_COLORS, stubRoutine, nullptr},
+    {true, true, 127, 127, 127, EFF_RAINBOW_2D, T_RAINBOW_2D, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_SPARKLES, T_SPARKLES, stubRoutine, nullptr},
-//    {true, true, 127, 127, 127, EFF_SNOW, T_SNOW, snowRoutine, nullptr},    
     {true, true, 127, 127, 127, EFF_SNOW, T_SNOW, stubRoutine, nullptr},
-//    {true, true, 127, 127, 127, EFF_SNOWSTORMSTARFALL, T_SNOWSTORMSTARFALL, snowStormStarfallRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_SNOWSTORMSTARFALL, T_SNOWSTORMSTARFALL, stubRoutine, nullptr},
-//    {true, true, 127, 127, 127, EFF_MATRIX, T_MATRIX, matrixRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_MATRIX, T_MATRIX, stubRoutine, nullptr},
-//    {true, true, 127, 127, 127, EFF_LIGHTERS, T_LIGHTERS, lightersRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_LIGHTERS, T_LIGHTERS, stubRoutine, nullptr},
-    {true, true, 127, 127, 127, EFF_LIGHTER_TRACES, T_LIGHTER_TRACES, ballsRoutine, nullptr},
-    {true, true, 127, 127, 127, EFF_CUBE, T_CUBE, ballRoutine, nullptr},
-    {true, true, 127, 127, 127, EFF_PULSE, T_PULSE, pulseRoutine, nullptr},
-//    {true, true, 127, 127, 127, EFF_EVERYTHINGFALL, T_EVERYTHINGFALL, fire2012WithPalette, nullptr},
+    {true, true, 127, 127, 127, EFF_LIGHTER_TRACES, T_LIGHTER_TRACES, stubRoutine, nullptr},
+    {true, true, 127, 127, 127, EFF_CUBE, T_CUBE, stubRoutine, nullptr},
+    {true, true, 127, 127, 127, EFF_PULSE, T_PULSE, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_EVERYTHINGFALL, T_EVERYTHINGFALL, stubRoutine, nullptr},
-    {true, true, 127, 127, 127, EFF_FIRE, T_FIRE, fireRoutine, nullptr},
-    {true, true, 127, 127, 127, EFF_PAINTBALL, T_PAINTBALL, lightBallsRoutine, nullptr},
-
+    {true, true, 127, 127, 127, EFF_FIRE, T_FIRE, stubRoutine, nullptr},
+    {true, true, 127, 127, 127, EFF_PAINTBALL, T_PAINTBALL, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_MADNESS, T_MADNESS, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_CLOUDS, T_CLOUDS, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_LAVA, T_LAVA, stubRoutine, nullptr},
@@ -308,11 +300,11 @@ static EFFECT _EFFECTS_ARR[] = {
     {true, true, 127, 127, 127, EFF_ZEBRA, T_ZEBRA, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_FOREST, T_FOREST, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_OCEAN, T_OCEAN, stubRoutine, nullptr},
-
-    {true, true, 127, 127, 127, EFF_BBALS, T_BBALS, BBallsRoutine, nullptr}, 
-    {true, true, 127, 127, 127, EFF_SINUSOID3, T_SINUSOID3, Sinusoid3Routine, nullptr},
-    {true, true, 127, 127, 127, EFF_METABALLS, T_METABALLS, metaBallsRoutine, nullptr},
-    {true, true, 127, 127, 127, EFF_SPIRO, T_SPIRO, stubRoutine, nullptr},      // переделывается
+    {true, true, 127, 127, 127, EFF_BBALS, T_BBALS, stubRoutine, nullptr}, 
+    {true, true, 127, 127, 127, EFF_SINUSOID3, T_SINUSOID3, stubRoutine, nullptr},
+    {true, true, 127, 127, 127, EFF_METABALLS, T_METABALLS, stubRoutine, nullptr},
+    {true, true, 127, 127, 127, EFF_SPIRO, T_SPIRO, stubRoutine, nullptr},
+    // {true, true, 127, 127, 127, EFF_SPIRO, T_SPIRO, spiroRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_RAINBOWCOMET, T_RAINBOWCOMET, rainbowCometRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_RAINBOWCOMET3, T_RAINBOWCOMET3, rainbowComet3Routine, nullptr},
     {true, true, 127, 127, 127, EFF_PRIZMATA, T_PRIZMATA, prismataRoutine, nullptr},
@@ -644,6 +636,102 @@ public:
      * деструктор по-умолчанию пустой, может быть переопределен
      */
     virtual ~EffectCalc() = default;
+};
+
+class EffectSpiro : public EffectCalc {
+private:
+    bool spiroRoutine(CRGB *leds, const char *param);
+
+public:
+    bool run(CRGB *ledarr, const char *opt=nullptr) override;
+};
+
+class EffectMetaBalls : public EffectCalc {
+private:
+    bool metaBallsRoutine(CRGB *leds, const char *param);
+
+public:
+    bool run(CRGB *ledarr, const char *opt=nullptr) override;
+};
+
+class EffectSinusoid3 : public EffectCalc {
+private:
+    bool sinusoid3Routine(CRGB *leds, const char *param);
+
+public:
+    bool run(CRGB *ledarr, const char *opt=nullptr) override;
+};
+
+class EffectBBalls : public EffectCalc {
+private:
+    bool bBallsRoutine(CRGB *leds, const char *param);
+
+public:
+    bool run(CRGB *ledarr, const char *opt=nullptr) override;
+};
+
+class EffectLightBalls : public EffectCalc {
+private:
+    bool lightBallsRoutine(CRGB *leds, const char *param);
+
+public:
+    bool run(CRGB *ledarr, const char *opt=nullptr) override;
+};
+
+class EffectFire : public EffectCalc {
+private:
+    bool fireRoutine(CRGB *leds, const char *param);
+
+public:
+    bool run(CRGB *ledarr, const char *opt=nullptr) override;
+};
+
+class EffectPulse : public EffectCalc {
+private:
+    bool pulseRoutine(CRGB *leds, const char *param);
+
+public:
+    bool run(CRGB *ledarr, const char *opt=nullptr) override;
+};
+
+class EffectBall : public EffectCalc {
+private:
+    bool ballRoutine(CRGB *leds, const char *param);
+
+public:
+    bool run(CRGB *ledarr, const char *opt=nullptr) override;
+};
+
+class EffectLighterTracers : public EffectCalc {
+private:
+    bool lighterTracersRoutine(CRGB *leds, const char *param);
+
+public:
+    bool run(CRGB *ledarr, const char *opt=nullptr) override;
+};
+
+class EffectRainbow : public EffectCalc {
+private:
+    bool rainbowDiagonalRoutine(CRGB *leds, const char *param);
+
+public:
+    bool run(CRGB *ledarr, const char *opt=nullptr) override;
+};
+
+class EffectColors : public EffectCalc {
+private:
+    bool colorsRoutine(CRGB *leds, const char *param);
+
+public:
+    bool run(CRGB *ledarr, const char *opt=nullptr) override;
+};
+
+class EffectWhiteColorStripe : public EffectCalc {
+private:
+    bool whiteColorStripeRoutine(CRGB *leds, const char *param);
+
+public:
+    bool run(CRGB *ledarr, const char *opt=nullptr) override;
 };
 
 class EffectMatrix : public EffectCalc {

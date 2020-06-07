@@ -301,8 +301,8 @@ static EFFECT _EFFECTS_ARR[] = {
     {true, true, 127, 127, 127, EFF_FOREST, T_FOREST, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_OCEAN, T_OCEAN, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_BBALS, T_BBALS, stubRoutine, nullptr}, 
-    // {true, true, 127, 127, 127, EFF_BBALS, T_BBALS, BBallsRoutine, nullptr},
-    {true, true, 127, 127, 127, EFF_SINUSOID3, T_SINUSOID3, Sinusoid3Routine, nullptr},
+    {true, true, 127, 127, 127, EFF_SINUSOID3, T_SINUSOID3, stubRoutine, nullptr},
+    // {true, true, 127, 127, 127, EFF_SINUSOID3, T_SINUSOID3, Sinusoid3Routine, nullptr},
     {true, true, 127, 127, 127, EFF_METABALLS, T_METABALLS, metaBallsRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_SPIRO, T_SPIRO, spiroRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_RAINBOWCOMET, T_RAINBOWCOMET, rainbowCometRoutine, nullptr},
@@ -587,6 +587,14 @@ public:
      * деструктор по-умолчанию пустой, может быть переопределен
      */
     virtual ~EffectCalc() = default;
+};
+
+class EffectSinusoid3 : public EffectCalc {
+private:
+    bool sinusoid3Routine(CRGB *leds, const char *param);
+
+public:
+    bool run(CRGB *ledarr, const char *opt=nullptr) override;
 };
 
 class EffectBBalls : public EffectCalc {

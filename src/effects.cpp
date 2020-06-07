@@ -1247,7 +1247,11 @@ bool EffectBBalls::bBallsRoutine(CRGB *leds, const char *param)
   Sinusoid3 by Stefan Petrick (mod by Palpalych for GyverLamp 27/02/2020)
   read more about the concept: https://www.youtube.com/watch?v=mubH-w_gwdA
 */
-void Sinusoid3Routine (CRGB *leds, const char *param)
+bool EffectSinusoid3::run(CRGB *ledarr, const char *opt){
+  return sinusoid3Routine(*&ledarr, &*opt);
+}
+
+bool EffectSinusoid3::sinusoid3Routine(CRGB *leds, const char *param)
 {
   const uint8_t semiHeightMajor =  HEIGHT / 2 + (HEIGHT % 2);
   const uint8_t semiWidthMajor =  WIDTH / 2  + (WIDTH % 2) ;
@@ -1289,6 +1293,7 @@ void Sinusoid3Routine (CRGB *leds, const char *param)
       myLamp.drawPixelXY(x, y, color);
     }
   }
+  return true;
 }
 
 /*
@@ -3419,6 +3424,9 @@ void multipleStreamSmokeRoutine(CRGB *leds, const char *param)
 void EffectWorker::workerset(EFF_ENUM effect){
   switch (effect)
   {
+  case EFF_ENUM::EFF_SINUSOID3 :
+    worker = std::unique_ptr<EffectSinusoid3>(new EffectSinusoid3());
+    break;
   case EFF_ENUM::EFF_BBALS :
     worker = std::unique_ptr<EffectBBalls>(new EffectBBalls());
     break;

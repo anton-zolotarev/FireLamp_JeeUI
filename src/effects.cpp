@@ -1366,6 +1366,10 @@ bool EffectMetaBalls::metaBallsRoutine(CRGB *leds, const char *param)
  * Copyright (c) 2014 Jason Coon
  * Неполная адаптация SottNick
  */
+bool EffectSpiro::run(CRGB *ledarr, const char *opt){
+  return spiroRoutine(*&ledarr, &*opt);
+}
+
 uint8_t mapsin8(uint8_t theta, uint8_t lowest = 0, uint8_t highest = 255) {
   uint8_t beatsin = sin8(theta);
   uint8_t rangewidth = highest - lowest;
@@ -1382,7 +1386,7 @@ uint8_t mapcos8(uint8_t theta, uint8_t lowest = 0, uint8_t highest = 255) {
   return result;
 }
 
-void spiroRoutine(CRGB *leds, const char *param)
+bool EffectSpiro::spiroRoutine(CRGB *leds, const char *param)
 {
     //static float GSHMEM.spirotheta1 = 0;
     //static float GSHMEM.spirotheta2 = 0;
@@ -1494,6 +1498,7 @@ void spiroRoutine(CRGB *leds, const char *param)
     EVERY_N_MILLIS(33) {
       GSHMEM.spirohueoffset += 1;
     }
+    return true;
 }
 
 // ***** RAINBOW COMET / РАДУЖНАЯ КОМЕТА *****
@@ -3429,6 +3434,9 @@ void multipleStreamSmokeRoutine(CRGB *leds, const char *param)
 void EffectWorker::workerset(EFF_ENUM effect){
   switch (effect)
   {
+  case EFF_ENUM::EFF_SPIRO :
+    worker = std::unique_ptr<EffectSpiro>(new EffectSpiro());
+    break;
   case EFF_ENUM::EFF_METABALLS :
     worker = std::unique_ptr<EffectMetaBalls>(new EffectMetaBalls());
     break;

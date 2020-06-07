@@ -290,7 +290,6 @@ static EFFECT _EFFECTS_ARR[] = {
     {true, true, 127, 127, 127, EFF_PULSE, T_PULSE, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_EVERYTHINGFALL, T_EVERYTHINGFALL, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_FIRE, T_FIRE, stubRoutine, nullptr},
-    // {true, true, 127, 127, 127, EFF_PAINTBALL, T_PAINTBALL, lightBallsRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_PAINTBALL, T_PAINTBALL, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_MADNESS, T_MADNESS, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_CLOUDS, T_CLOUDS, stubRoutine, nullptr},
@@ -301,8 +300,8 @@ static EFFECT _EFFECTS_ARR[] = {
     {true, true, 127, 127, 127, EFF_ZEBRA, T_ZEBRA, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_FOREST, T_FOREST, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_OCEAN, T_OCEAN, stubRoutine, nullptr},
-
-    {true, true, 127, 127, 127, EFF_BBALS, T_BBALS, BBallsRoutine, nullptr}, 
+    {true, true, 127, 127, 127, EFF_BBALS, T_BBALS, stubRoutine, nullptr}, 
+    // {true, true, 127, 127, 127, EFF_BBALS, T_BBALS, BBallsRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_SINUSOID3, T_SINUSOID3, Sinusoid3Routine, nullptr},
     {true, true, 127, 127, 127, EFF_METABALLS, T_METABALLS, metaBallsRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_SPIRO, T_SPIRO, spiroRoutine, nullptr},
@@ -588,6 +587,14 @@ public:
      * деструктор по-умолчанию пустой, может быть переопределен
      */
     virtual ~EffectCalc() = default;
+};
+
+class EffectBBalls : public EffectCalc {
+private:
+    bool bBallsRoutine(CRGB *leds, const char *param);
+
+public:
+    bool run(CRGB *ledarr, const char *opt=nullptr) override;
 };
 
 class EffectLightBalls : public EffectCalc {

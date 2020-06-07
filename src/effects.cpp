@@ -1172,11 +1172,15 @@ bool Effect3DNoise::run(CRGB *ledarr, const char *opt){
 //  https://github.com/githubcdr/Arduino/blob/master/bouncingballs/bouncingballs.ino
 //  With BIG thanks to the FastLED community!
 //  адаптация от SottNick
+bool EffectBBalls::run(CRGB *ledarr, const char *opt){
+  return bBallsRoutine(*&ledarr, &*opt);
+}
+
 #define bballsGRAVITY           (-10)              // Downward (negative) acceleration of gravity in m/s^2
 #define bballsH0                (2)                  // Starting height, in meters, of the ball (strip length)
 #define bballsVImpact0          (sqrt(-2 * bballsGRAVITY * bballsH0))
 //#define bballsMaxNUM_BALLS      (16U)                // максимальное количество мячиков прикручено при адаптации для бегунка Масштаб
-void BBallsRoutine(CRGB *leds, const char *param)
+bool EffectBBalls::bBallsRoutine(CRGB *leds, const char *param)
 {
   uint8_t bballsNUM_BALLS;                             // Number of bouncing balls you want (recommend < 7, but 20 is fun in its own way) ... количество мячиков теперь задаётся бегунком, а не константой
   bballsNUM_BALLS =  map(myLamp.effects.getScale(), 0, 255, 1, bballsMaxNUM_BALLS);
@@ -1234,6 +1238,7 @@ void BBallsRoutine(CRGB *leds, const char *param)
     }
     myLamp.setLeds(myLamp.getPixelNumber(GSHMEM.bballsX[i], GSHMEM.bballsPos[i]), CHSV(GSHMEM.bballsCOLOR[i], 255, 255));
   }
+  return true;
 }
 
 // ***** SINUSOID3 / СИНУСОИД3 *****
@@ -3412,9 +3417,11 @@ void multipleStreamSmokeRoutine(CRGB *leds, const char *param)
  * Создаем экземпляр класса калькулятора в зависимости от требуемого эффекта
  */
 void EffectWorker::workerset(EFF_ENUM effect){
-
   switch (effect)
   {
+  case EFF_ENUM::EFF_BBALS :
+    worker = std::unique_ptr<EffectBBalls>(new EffectBBalls());
+    break;
   case EFF_ENUM::EFF_PAINTBALL :
     worker = std::unique_ptr<EffectLightBalls>(new EffectLightBalls());
     break;

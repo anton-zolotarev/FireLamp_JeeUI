@@ -108,8 +108,8 @@ void stubRoutine(CRGB *, const char *);
 //void sparklesRoutine(CRGB*, const char*);
 void fireRoutine(CRGB*, const char*);
 // void whiteColorStripeRoutine(CRGB*, const char*);
-//void fire2012WithPalette(CRGB*, const char*);
-void pulseRoutine(CRGB*, const char*);
+// void fire2012WithPalette(CRGB*, const char*);
+// void pulseRoutine(CRGB*, const char*);
 void rainbowDiagonalRoutine(CRGB*, const char*);
 // void colorsRoutine(CRGB*, const char*);
 // void matrixRoutine(CRGB*, const char*);
@@ -131,12 +131,12 @@ void cloudsNoiseRoutine(CRGB*, const char*);
 void lavaNoiseRoutine(CRGB*, const char*);
 */
 void BBallsRoutine(CRGB*, const char*);
-void Sinusoid3Routine(CRGB*, const char*);
-void metaBallsRoutine(CRGB*, const char*);
+//void Sinusoid3Routine(CRGB*, const char*);
+//void metaBallsRoutine(CRGB*, const char*);
 //void spiroRoutine(CRGB*, const char*);
 void rainbowCometRoutine(CRGB*, const char*);
 void rainbowComet3Routine(CRGB*, const char*);
-void prismataRoutine(CRGB*, const char*);
+//void prismataRoutine(CRGB*, const char*);
 void flockRoutine(CRGB*, const char*);
 void swirlRoutine(CRGB*, const char*);
 void incrementalDriftRoutine(CRGB*, const char*);
@@ -307,7 +307,7 @@ static EFFECT _EFFECTS_ARR[] = {
     // {true, true, 127, 127, 127, EFF_SPIRO, T_SPIRO, spiroRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_RAINBOWCOMET, T_RAINBOWCOMET, rainbowCometRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_RAINBOWCOMET3, T_RAINBOWCOMET3, rainbowComet3Routine, nullptr},
-    {true, true, 127, 127, 127, EFF_PRIZMATA, T_PRIZMATA, prismataRoutine, nullptr},
+    {true, true, 127, 127, 127, EFF_PRIZMATA, T_PRIZMATA, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_FLOCK, T_FLOCK, flockRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_SWIRL, T_SWIRL, swirlRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_DRIFT, T_DRIFT, incrementalDriftRoutine, nullptr},
@@ -638,14 +638,6 @@ public:
     virtual ~EffectCalc() = default;
 };
 
-class EffectSpiro : public EffectCalc {
-private:
-    bool spiroRoutine(CRGB *leds, const char *param);
-
-public:
-    bool run(CRGB *ledarr, const char *opt=nullptr) override;
-};
-
 class EffectMetaBalls : public EffectCalc {
 private:
     bool metaBallsRoutine(CRGB *leds, const char *param);
@@ -874,6 +866,16 @@ public:
     bool run(CRGB *ledarr, const char *opt=nullptr) override;
 };
 
+class EffectPrismata : public EffectCalc {
+private:
+  byte spirohueoffset = 0;
+
+  bool prismataRoutine(CRGB *leds, const char *param);
+
+public:
+    void load() override;
+    bool run(CRGB *ledarr, const char *opt=nullptr) override;
+};
 
 
 class EffectWorker {

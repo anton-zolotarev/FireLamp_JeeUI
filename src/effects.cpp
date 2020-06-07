@@ -1760,36 +1760,36 @@ void rainbowComet3Routine(CRGB *leds, const char *param)
 
 // ============= ЭФФЕКТ ПРИЗМАТА =============== 
 // Prismata Loading Animation
-void prismataRoutine(CRGB *leds, const char *param)
-{
-  const TProgmemRGBPalette16 *palette_arr[] = {&PartyColors_p, &OceanColors_p, &LavaColors_p, &HeatColors_p, &WaterfallColors_p, &CloudColors_p, &ForestColors_p, &RainbowColors_p, &RainbowStripeColors_p};
-  TProgmemRGBPalette16 const *curPalette;
-  uint8_t palleteCnt = sizeof(palette_arr)/sizeof(TProgmemRGBPalette16 *); // кол-во палитр
-  float ptPallete; // сколько пунктов приходится на одну палитру; 255.1 - диапазон ползунка, не включая 255, т.к. растягиваем только нужное :)
-  uint8_t pos; // позиция в массиве указателей паллитр
-  uint8_t curVal; // curVal == либо var как есть, либо getScale
-  String var = myLamp.effects.getCurrent()->getValue(myLamp.effects.getCurrent()->param, F("R"));
-  if(!var.isEmpty()){
-    ptPallete = 255.1/palleteCnt; // сколько пунктов приходится на одну палитру; 255.1 - диапазон ползунка, не включая 255, т.к. растягиваем только нужное :)
-    pos = (uint8_t)(var.toFloat()/ptPallete); // для 9 палитр будет 255.1/9==28.34, как следствие ползунок/28.34, при 1...28 будет давать 0, 227...255 -> 8
-    curVal = var.toInt();
-  } else {
-    ptPallete = 255.1/palleteCnt; // сколько пунктов приходится на одну палитру; 255.1 - диапазон ползунка, не включая 255, т.к. растягиваем только нужное :)
-    pos = (uint8_t)((float)myLamp.effects.getScale()/ptPallete);
-    curVal = myLamp.effects.getScale();
+void EffectPrismata::load(){
+  palettesload();    // подгружаем дефолтные палитры
+  scalerefresh();    // выбираем палитру согласно "шкале"
+}
+
+bool EffectPrismata::run(CRGB *ledarr, const char *opt){
+  /**
+   * дергаем костыль раз в секунду для обвления палитры/шкалы
+   */
+  EVERY_N_SECONDS(1){
+    scalerefresh();
   }
-  curPalette = palette_arr[pos]; // выбираем из доп. регулятора
-  uint8_t scale = curVal-ptPallete*pos; // разбиваю на поддиапазоны внутри диапазона, будет уходить в 0 на крайней позиции поддиапазона, ну и хрен с ним :), хотя нужно помнить!
+  return prismataRoutine(*&ledarr, &*opt);
+}
+
+bool EffectPrismata::prismataRoutine(CRGB *leds, const char *param)
+{
+  if (curPalette == nullptr) {
+    return false;
+  }
 
   EVERY_N_MILLIS(100) {
-  //    GSHMEM.spirohueoffset += 1;   TO BE FIXED!!!
+    spirohueoffset += 1;
   }
 
   myLamp.blur2d(15);
   myLamp.dimAll(254U - scale);
   for (uint8_t x = 0; x < WIDTH; x++) {
       uint8_t y = beatsin8(x + 1 * myLamp.effects.getSpeed()/5, 0, HEIGHT-1);
-      // myLamp.drawPixelXY(x, y, ColorFromPalette(*curPalette, (x+GSHMEM.spirohueoffset) * 4));  // TO BE FIXED
+      myLamp.drawPixelXY(x, y, ColorFromPalette(*curPalette, (x+spirohueoffset) * 4));
     }
 }
 
@@ -3467,6 +3467,9 @@ void multipleStreamSmokeRoutine(CRGB *leds, const char *param)
 void EffectWorker::workerset(EFF_ENUM effect){
   switch (effect)
   {
+  case EFF_ENUM::EFF_PRIZMATA :
+    worker = std::unique_ptr<EffectPrismata>(new EffectPrismata());
+    break;
   case EFF_ENUM::EFF_SPIRO :
     worker = std::unique_ptr<EffectSpiro>(new EffectSpiro());
     break;
@@ -3534,9 +3537,6 @@ void EffectWorker::workerset(EFF_ENUM effect){
   case EFF_ENUM::EFF_FOREST :
   case EFF_ENUM::EFF_OCEAN :
     worker = std::unique_ptr<Effect3DNoise>(new Effect3DNoise());
-    break;
-  case EFF_ENUM::EFF_SPIRO :
-    worker = std::unique_ptr<EffectSpiro>(new EffectSpiro());
     break;
   default:
     worker = std::unique_ptr<EffectCalc>(new EffectCalc());

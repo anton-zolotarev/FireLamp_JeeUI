@@ -106,7 +106,7 @@ EFF_TIME = (98)                               // Часы (служебный, �
  */
 void stubRoutine(CRGB *, const char *);
 //void sparklesRoutine(CRGB*, const char*);
-void fireRoutine(CRGB*, const char*);
+//void fireRoutine(CRGB*, const char*);
 // void whiteColorStripeRoutine(CRGB*, const char*);
 // void fire2012WithPalette(CRGB*, const char*);
 // void pulseRoutine(CRGB*, const char*);
@@ -401,6 +401,7 @@ public:
             byte heat[WIDTH][HEIGHT];
 		};
         */
+/*
         struct { // Огонь
             uint8_t pcnt;
             uint8_t shiftHue[HEIGHT];                              // массив дороожки горизонтального смещения пламени (hueMask)
@@ -408,6 +409,7 @@ public:
             uint8_t shiftValue[HEIGHT];                            // массив дороожки горизонтального смещения пламени (hueValue)
             unsigned char matrixValue[8][16];
 		};
+*/
         struct { // радужная комета
             uint8_t eNs_noisesmooth;
             uint8_t rhue;
@@ -666,10 +668,21 @@ public:
 };
 
 class EffectFire : public EffectCalc {
+
+  uint8_t pcnt;
+  uint8_t shiftHue[HEIGHT];                              // массив дороожки горизонтального смещения пламени (hueMask)
+  uint8_t line[WIDTH];
+  uint8_t shiftValue[HEIGHT];                            // массив дороожки горизонтального смещения пламени (hueValue)
+  unsigned char matrixValue[8][16];
+
 private:
+    void drawFrame(uint8_t pcnt, bool isColored);
+    void generateLine();
+    void shiftUp();
     bool fireRoutine(CRGB *leds, const char *param);
 
 public:
+    void load() override;
     bool run(CRGB *ledarr, const char *opt=nullptr) override;
 };
 

@@ -287,10 +287,10 @@ static EFFECT _EFFECTS_ARR[] = {
     {true, true, 127, 127, 127, EFF_LIGHTERS, T_LIGHTERS, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_LIGHTER_TRACES, T_LIGHTER_TRACES, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_CUBE, T_CUBE, stubRoutine, nullptr},
-    // {true, true, 127, 127, 127, EFF_PULSE, T_PULSE, pulseRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_PULSE, T_PULSE, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_EVERYTHINGFALL, T_EVERYTHINGFALL, stubRoutine, nullptr},
-    {true, true, 127, 127, 127, EFF_FIRE, T_FIRE, fireRoutine, nullptr},
+    // {true, true, 127, 127, 127, EFF_FIRE, T_FIRE, fireRoutine, nullptr},
+    {true, true, 127, 127, 127, EFF_FIRE, T_FIRE, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_PAINTBALL, T_PAINTBALL, lightBallsRoutine, nullptr},
 
     {true, true, 127, 127, 127, EFF_MADNESS, T_MADNESS, stubRoutine, nullptr},
@@ -589,6 +589,14 @@ public:
      * деструктор по-умолчанию пустой, может быть переопределен
      */
     virtual ~EffectCalc() = default;
+};
+
+class EffectFire : public EffectCalc {
+private:
+    bool fireRoutine(CRGB *leds, const char *param);
+
+public:
+    bool run(CRGB *ledarr, const char *opt=nullptr) override;
 };
 
 class EffectPulse : public EffectCalc {

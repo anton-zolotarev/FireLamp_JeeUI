@@ -2411,8 +2411,6 @@ const TProgmemRGBPalette16 *firePalettes[] = {
   // Lower = more blending and smoother flames. Higher = less blending and flickery flames
   uint8_t fireSmoothing = 80*2.0*myLamp.effects.getSpeed()/255.0+10;
   //const uint8_t fireSmoothing =90; // random8(50, 120); //map(myLamp.effects.getSpeed(), 1, 255, 20, 100);
-  // Add entropy to random number generator; we use a lot of it.
-  random16_add_entropy(random(256));
 
   // Loop for each column individually
   for (uint8_t x = 0; x < WIDTH; x++)
@@ -3411,6 +3409,9 @@ void EffectWorker::workerset(EFF_ENUM effect){
 
   switch (effect)
   {
+  case EFF_ENUM::EFF_FIRE :
+    worker = std::unique_ptr<EffectFire>(new EffectFire());
+    break;
   case EFF_ENUM::EFF_PULSE :
     worker = std::unique_ptr<EffectPulse>(new EffectPulse());
     break;

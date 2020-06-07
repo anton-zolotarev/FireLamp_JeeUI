@@ -416,10 +416,14 @@ void drawFrame(uint8_t pcnt, bool isColored);
 void generateLine();
 void shiftUp();
 
-void fireRoutine(CRGB *leds, const char *param)
+bool EffectFire::run(CRGB *ledarr, const char *opt){
+  return fireRoutine(*&ledarr, &*opt);
+}
+
+bool EffectFire::fireRoutine(CRGB *leds, const char *param)
 {
   if ((micros() - myLamp.getEffDelay_uS() - 5000U) < (50000U - map(myLamp.effects.getSpeed(), 1, 255, 0, 50000U))) {
-    return;
+    return false;
   } else {
     myLamp.setEffDelay_uS(micros());
   }
@@ -445,6 +449,7 @@ void fireRoutine(CRGB *leds, const char *param)
   drawFrame(GSHMEM.pcnt, true);                              // для прошивки где стоит логический параметр
   // GSHMEM.pcnt += speed_scale;  // делитель кадров: задает скорость подъема пламени 25/100 = 1/4
   GSHMEM.pcnt += 25;
+  return true;
 }
 
 // Randomly generate the next line (matrix row)

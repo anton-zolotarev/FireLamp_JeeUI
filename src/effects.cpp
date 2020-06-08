@@ -2113,82 +2113,84 @@ void freqAnalyseRoutine(CRGB *leds, const char *param)
 #define TWINKLES_SPEEDS 4     // всего 4 варианта скоростей мерцания
 #define TWINKLES_MULTIPLIER 24 // слишком медленно, если на самой медленной просто по единичке добавлять
 
-void twinklesRoutine(CRGB *leds, const char *param)
+void EffectTwinkles::load(){
+  palettesload();    // подгружаем дефолтные палитры
+  scalerefresh();    // выбираем палитру согласно "шкале"
+
+  tnum = palettescale;
+
+  for (uint32_t idx=0; idx < NUM_LEDS; idx++) {
+    if (random8(tnum) == 0){                // я не понял что это значит
+      ledsbuff[idx].r = random8();                          // оттенок пикселя
+      ledsbuff[idx].g = random8(1, TWINKLES_SPEEDS * 2 +1); // скорость и направление (нарастает 1-4 или угасает 5-8)
+      ledsbuff[idx].b = random8();                          // яркость
+    }
+    else
+      ledsbuff[idx] = 0;                                    // всё выкл
+  }
+
+}
+
+bool EffectTwinkles::run(CRGB *ledarr, const char *opt){
+  if (dryrun())
+    return false;
+  /**
+   * дергаем костыль раз в секунду для обвления палитры/шкалы
+   */
+  EVERY_N_SECONDS(1){
+    scalerefresh();
+  }
+
+  return twinklesRoutine(*&ledarr, &*opt);
+}
+
+bool EffectTwinkles::twinklesRoutine(CRGB *leds, const char *param)
 {
-  if((millis() - myLamp.getEffDelay() - EFFECTS_RUN_TIMER) < (unsigned)(255-myLamp.effects.getSpeed())){
-    return;
-  } else {
-    myLamp.setEffDelay(millis());
+  if (curPalette == nullptr) {
+    return false;
   }
 
-  uint scale = TWINKLES_MULTIPLIER*myLamp.effects.getSpeed()/255.0;
-  const TProgmemRGBPalette16 *palette_arr[] = {&PartyColors_p, &OceanColors_p, &LavaColors_p, &HeatColors_p, &WaterfallColors_p, &CloudColors_p, &ForestColors_p, &RainbowColors_p, &RainbowStripeColors_p};
-  TProgmemRGBPalette16 const *curPalette;
-  uint8_t palleteCnt = sizeof(palette_arr)/sizeof(TProgmemRGBPalette16 *); // кол-во палитр
-  float ptPallete; // сколько пунктов приходится на одну палитру; 255.1 - диапазон ползунка, не включая 255, т.к. растягиваем только нужное :)
-  uint8_t pos; // позиция в массиве указателей паллитр
-  uint8_t curVal; // curVal == либо var как есть, либо getScale
-  String var = myLamp.effects.getCurrent()->getValue(myLamp.effects.getCurrent()->param, F("R"));
-  if(!var.isEmpty()){
-    ptPallete = 255.1/palleteCnt; // сколько пунктов приходится на одну палитру; 255.1 - диапазон ползунка, не включая 255, т.к. растягиваем только нужное :)
-    pos = (uint8_t)(var.toFloat()/ptPallete); // для 9 палитр будет 255.1/9==28.34, как следствие ползунок/28.34, при 1...28 будет давать 0, 227...255 -> 8
-    curVal = var.toInt();
-  } else {
-    ptPallete = 255.1/palleteCnt; // сколько пунктов приходится на одну палитру; 255.1 - диапазон ползунка, не включая 255, т.к. растягиваем только нужное :)
-    pos = (uint8_t)((float)myLamp.effects.getScale()/ptPallete);
-    curVal = myLamp.effects.getScale();
-  }
-  curPalette = palette_arr[pos]; // выбираем из доп. регулятора
-  uint8_t sscale = curVal-ptPallete*pos; // разбиваю на поддиапазоны внутри диапазона, будет уходить в 0 на крайней позиции поддиапазона, ну и хрен с ним :), хотя нужно помнить!
+  scale = TWINKLES_MULTIPLIER*myLamp.effects.getSpeed()/255.0;
 
-  uint8_t tnum = sscale;
+/*
+  // тоже не понял что это... если была переменная R, то нужно что-то обсчитать относительно бегунка шкалы?
   if(!var.isEmpty()){
     tnum = 50-49*(myLamp.effects.getScale()/255.0);
   }  
+*/
 
-    if (myLamp.isLoading())
-    {
-      GSHMEM.thue = 0U;
-      for (uint32_t idx=0; idx < NUM_LEDS; idx++) {
-        if (random8(tnum) == 0){
-          GSHMEM.ledsbuff[idx].r = random8();                          // оттенок пикселя
-          GSHMEM.ledsbuff[idx].g = random8(1, TWINKLES_SPEEDS * 2 +1); // скорость и направление (нарастает 1-4 или угасает 5-8)
-          GSHMEM.ledsbuff[idx].b = random8();                          // яркость
-        }
-        else
-          GSHMEM.ledsbuff[idx] = 0;                                    // всё выкл
-      }
-    }
     for (uint32_t idx=0; idx < NUM_LEDS; idx++) {
-      if (GSHMEM.ledsbuff[idx].b == 0){
-        if (random8(tnum) == 0 && GSHMEM.thue > 0){  // если пиксель ещё не горит, зажигаем каждый ХЗй
-          GSHMEM.ledsbuff[idx].r = random8();                          // оттенок пикселя
-          GSHMEM.ledsbuff[idx].g = random8(1, TWINKLES_SPEEDS +1);     // скорость и направление (нарастает 1-4, но не угасает 5-8)
-          GSHMEM.ledsbuff[idx].b = GSHMEM.ledsbuff[idx].g;                    // яркость
-          GSHMEM.thue--; // уменьшаем количество погасших пикселей
+      if (ledsbuff[idx].b == 0){
+        if (random8(tnum) == 0 && thue > 0){  // если пиксель ещё не горит, зажигаем каждый ХЗй
+          ledsbuff[idx].r = random8();                          // оттенок пикселя
+          ledsbuff[idx].g = random8(1, TWINKLES_SPEEDS +1);     // скорость и направление (нарастает 1-4, но не угасает 5-8)
+          ledsbuff[idx].b = ledsbuff[idx].g;                    // яркость
+          thue--; // уменьшаем количество погасших пикселей
         }
       }
-      else if (GSHMEM.ledsbuff[idx].g <= TWINKLES_SPEEDS){             // если нарастание яркости
-        if (GSHMEM.ledsbuff[idx].b > 255U - GSHMEM.ledsbuff[idx].g - scale){            // если досигнут максимум
-          GSHMEM.ledsbuff[idx].b = 255U;
-          GSHMEM.ledsbuff[idx].g = GSHMEM.ledsbuff[idx].g + TWINKLES_SPEEDS;
+      else if (ledsbuff[idx].g <= TWINKLES_SPEEDS){             // если нарастание яркости
+        if (ledsbuff[idx].b > 255U - ledsbuff[idx].g - scale){            // если досигнут максимум
+          ledsbuff[idx].b = 255U;
+          ledsbuff[idx].g = ledsbuff[idx].g + TWINKLES_SPEEDS;
         }
         else
-          GSHMEM.ledsbuff[idx].b = GSHMEM.ledsbuff[idx].b + GSHMEM.ledsbuff[idx].g + scale;
+          ledsbuff[idx].b = ledsbuff[idx].b + ledsbuff[idx].g + scale;
       }
       else {                                                    // если угасание яркости
-        if (GSHMEM.ledsbuff[idx].b <= GSHMEM.ledsbuff[idx].g - TWINKLES_SPEEDS + scale){// если досигнут минимум
-          GSHMEM.ledsbuff[idx].b = 0;                                  // всё выкл
-          GSHMEM.thue++; // считаем количество погасших пикселей
+        if (ledsbuff[idx].b <= ledsbuff[idx].g - TWINKLES_SPEEDS + scale){// если досигнут минимум
+          ledsbuff[idx].b = 0;                                  // всё выкл
+          thue++; // считаем количество погасших пикселей
         }
         else
-          GSHMEM.ledsbuff[idx].b = GSHMEM.ledsbuff[idx].b - GSHMEM.ledsbuff[idx].g + TWINKLES_SPEEDS - scale;
+          ledsbuff[idx].b = ledsbuff[idx].b - ledsbuff[idx].g + TWINKLES_SPEEDS - scale;
       }
-      if (GSHMEM.ledsbuff[idx].b == 0)
+      if (ledsbuff[idx].b == 0)
         myLamp.setLeds(idx, 0U);
       else
-        myLamp.setLeds(idx, ColorFromPalette(*curPalette, GSHMEM.ledsbuff[idx].r, GSHMEM.ledsbuff[idx].b));
+        myLamp.setLeds(idx, ColorFromPalette(*curPalette, ledsbuff[idx].r, ledsbuff[idx].b));
     }
+
+  return true;
 }
 
 // ============= RADAR / РАДАР ===============
@@ -3462,6 +3464,9 @@ void EffectWorker::workerset(EFF_ENUM effect){
   case EFF_ENUM::EFF_DRIFT :
   case EFF_ENUM::EFF_DRIFT2 :
     worker = std::unique_ptr<EffectDrift>(new EffectDrift());
+    break;
+  case EFF_ENUM::EFF_TWINKLES :
+    worker = std::unique_ptr<EffectTwinkles>(new EffectTwinkles());
     break;
   default:
     worker = std::unique_ptr<EffectCalc>(new EffectCalc());

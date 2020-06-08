@@ -134,8 +134,8 @@ void BBallsRoutine(CRGB*, const char*);
 //void Sinusoid3Routine(CRGB*, const char*);
 //void metaBallsRoutine(CRGB*, const char*);
 //void spiroRoutine(CRGB*, const char*);
-void rainbowCometRoutine(CRGB*, const char*);
-void rainbowComet3Routine(CRGB*, const char*);
+//void rainbowCometRoutine(CRGB*, const char*);
+//void rainbowComet3Routine(CRGB*, const char*);
 //void prismataRoutine(CRGB*, const char*);
 //void flockRoutine(CRGB*, const char*);
 void swirlRoutine(CRGB*, const char*);
@@ -304,8 +304,8 @@ static EFFECT _EFFECTS_ARR[] = {
     {true, true, 127, 127, 127, EFF_SINUSOID3, T_SINUSOID3, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_METABALLS, T_METABALLS, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_SPIRO, T_SPIRO, stubRoutine, nullptr},
-    {true, true, 127, 127, 127, EFF_RAINBOWCOMET, T_RAINBOWCOMET, rainbowCometRoutine, nullptr},
-    {true, true, 127, 127, 127, EFF_RAINBOWCOMET3, T_RAINBOWCOMET3, rainbowComet3Routine, nullptr},
+    {true, true, 127, 127, 127, EFF_RAINBOWCOMET, T_RAINBOWCOMET, stubRoutine, nullptr},
+    {true, true, 127, 127, 127, EFF_RAINBOWCOMET3, T_RAINBOWCOMET3, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_PRIZMATA, T_PRIZMATA, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_FLOCK, T_FLOCK, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_SWIRL, T_SWIRL, swirlRoutine, nullptr},
@@ -410,7 +410,7 @@ public:
             unsigned char matrixValue[8][16];
 		};
 */
-        struct { // радужная комета
+        struct { // радужная комета / smoke / rain
             uint8_t eNs_noisesmooth;
             uint8_t rhue;
             uint8_t smokeHue;
@@ -627,7 +627,6 @@ public:
      */
     uint8_t mapsin8(uint8_t theta, uint8_t lowest = 0, uint8_t highest = 255);
     uint8_t mapcos8(uint8_t theta, uint8_t lowest = 0, uint8_t highest = 255);
-
 
     /**
      * деструктор по-умолчанию пустой, может быть переопределен
@@ -888,6 +887,42 @@ public:
     void load() override;
     bool run(CRGB *ledarr, const char *opt=nullptr) override;
 };
+
+
+class EffectComet : public EffectCalc {
+private:
+    uint8_t eNs_noisesmooth;
+    uint8_t rhue;
+    uint8_t smokeHue;
+    float xSmokePos;
+    float xSmokePos2;
+    uint16_t noiseX;
+    uint16_t noiseY;
+    uint16_t noiseZ;
+    uint8_t nline[WIDTH];
+    uint32_t e_x[NUM_LAYERS];
+    uint32_t e_y[NUM_LAYERS];
+    uint32_t e_z[NUM_LAYERS];
+    uint32_t e_scaleX[NUM_LAYERS];
+    uint32_t e_scaleY[NUM_LAYERS];
+    uint8_t noise3d[NUM_LAYERS][WIDTH][HEIGHT];
+
+   const uint8_t e_centerX =  (WIDTH / 2) - 1;
+   const uint8_t e_centerY = (HEIGHT / 2) - 1;
+
+
+    void drawFillRect2_fast(int8_t x1, int8_t y1, int8_t x2, int8_t y2, CRGB color);
+    void FillNoise(int8_t layer);
+    void MoveFractionalNoiseX(int8_t amplitude = 1, float shift = 0);
+    void MoveFractionalNoiseY(int8_t amplitude = 1, float shift = 0);
+    bool rainbowCometRoutine(CRGB *leds, const char *param);
+    bool rainbowComet3Routine(CRGB *leds, const char *param);
+
+public:
+    void load() override;
+    bool run(CRGB *ledarr, const char *opt=nullptr) override;
+};
+
 
 
 class EffectWorker {

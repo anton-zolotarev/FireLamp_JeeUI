@@ -124,6 +124,11 @@ static const TProgmemRGBPalette16 WoodFireColors_p FL_PROGMEM = {CRGB::Black, CR
 #define NUM_LAYERS2            (2U)                 // The coordinates for 3 16-bit noise spaces.
 #define AVAILABLE_BOID_COUNT   (10U)                // стая, кол-во птиц
 
+// ***** RAINBOW COMET / РАДУЖНАЯ КОМЕТА *****
+#define e_com_TAILSPEED             (500)         // скорость смещения хвоста 
+#define e_com_BLUR                  (24U)         // размытие хвоста 
+#define e_com_3DCOLORSPEED          (5U)          // скорость случайного изменения цвета (0й - режим)
+
 
 template <class T>
 class Vector2 {

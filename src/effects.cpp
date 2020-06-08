@@ -175,6 +175,22 @@ void EffectCalc::scalerefresh(){
   }
 }
 
+// ******** общие мат. функции переиспользуются в другом эффекте
+uint8_t EffectCalc::mapsin8(uint8_t theta, uint8_t lowest, uint8_t highest) {
+  uint8_t beatsin = sin8(theta);
+  uint8_t rangewidth = highest - lowest;
+  uint8_t scaledbeat = scale8(beatsin, rangewidth);
+  uint8_t result = lowest + scaledbeat;
+  return result;
+}
+
+uint8_t EffectCalc::mapcos8(uint8_t theta, uint8_t lowest, uint8_t highest) {
+  uint8_t beatcos = cos8(theta);
+  uint8_t rangewidth = highest - lowest;
+  uint8_t scaledbeat = scale8(beatcos, rangewidth);
+  uint8_t result = lowest + scaledbeat;
+  return result;
+}
 
 // непустой дефолтный деструктор (если понадобится)
 // EffectCalc::~EffectCalc(){LOG(println, "Effect object destroyed");}
@@ -1433,24 +1449,6 @@ bool EffectMetaBalls::metaBallsRoutine(CRGB *leds, const char *param)
  * Неполная адаптация SottNick
  */
 
-// функция переиспользуется в другом эффекте
-uint8_t EffectCalc::mapsin8(uint8_t theta, uint8_t lowest, uint8_t highest) {
-  uint8_t beatsin = sin8(theta);
-  uint8_t rangewidth = highest - lowest;
-  uint8_t scaledbeat = scale8(beatsin, rangewidth);
-  uint8_t result = lowest + scaledbeat;
-  return result;
-}
-
-// функция переиспользуется в другом эффекте
-uint8_t EffectCalc::mapcos8(uint8_t theta, uint8_t lowest, uint8_t highest) {
-  uint8_t beatcos = cos8(theta);
-  uint8_t rangewidth = highest - lowest;
-  uint8_t scaledbeat = scale8(beatcos, rangewidth);
-  uint8_t result = lowest + scaledbeat;
-  return result;
-}
-
 void EffectSpiro::load(){
   palettesload();    // подгружаем дефолтные палитры
   scalerefresh();    // выбираем палитру согласно "шкале"
@@ -1534,43 +1532,36 @@ bool EffectSpiro::spiroRoutine(CRGB *leds, const char *param)
 }
 
 // ***** RAINBOW COMET / РАДУЖНАЯ КОМЕТА *****
-// v1.5.0 - Follow the Rainbow Comet / first release by PalPalych 29.02.2020
-// v1.7.0 - Updating for GuverLamp v1.7 by PalPalych 12.03.2020
-// v1.7.1 - Scale & Speed correction, dither & blur 23.03.2020
-// v1.7.2 - 0 Scale for Random 3d color 24.03.2020
 
-#define e_com_TAILSPEED             (500)         // скорость смещения хвоста 
-#define e_com_BLUR                  (24U)         // размытие хвоста 
-#define e_com_3DCOLORSPEED          (5U)          // скорость случайного изменения цвета (0й - режим)
-
-// // The coordinates for 3 16-bit noise spaces.
-// #define NUM_LAYERS 1
-// uint32_t GSHMEM.e_x[NUM_LAYERS];
-// uint32_t GSHMEM.e_y[NUM_LAYERS];
-// uint32_t GSHMEM.e_z[NUM_LAYERS];
-// uint32_t GSHMEM.e_scaleX[NUM_LAYERS];
-// uint32_t GSHMEM.e_scaleY[NUM_LAYERS];
-// uint8_t GSHMEM.noise3d[NUM_LAYERS][WIDTH][HEIGHT];
-// uint8_t GSHMEM.eNs_noisesmooth;
-
-void FillNoise(int8_t layer) {
-  const uint8_t e_centerX =  (WIDTH / 2) - 1;
-  const uint8_t e_centerY = (HEIGHT / 2) - 1;
-
-  for (uint8_t i = 0; i < WIDTH; i++) {
-    int32_t ioffset = GSHMEM.e_scaleX[layer] * (i - e_centerX);
-    for (uint8_t j = 0; j < HEIGHT; j++) {
-      int32_t joffset = GSHMEM.e_scaleY[layer] * (j - e_centerY);
-      int8_t data = inoise16(GSHMEM.e_x[layer] + ioffset, GSHMEM.e_y[layer] + joffset, GSHMEM.e_z[layer]) >> 8;
-      int8_t olddata = GSHMEM.noise3d[layer][i][j];
-      int8_t newdata = scale8( olddata, GSHMEM.eNs_noisesmooth ) + scale8( data, 255 - GSHMEM.eNs_noisesmooth );
-      data = newdata;
-      GSHMEM.noise3d[layer][i][j] = data;
+void EffectComet::drawFillRect2_fast(int8_t x1, int8_t y1, int8_t x2, int8_t y2, CRGB color)
+{ // Fine if: 0<x1<x2<WIDTH && 0<y1<y2<HEIGHT
+  for (int8_t xP = x1; xP <= x2; xP++)
+  {
+    for (int8_t yP = y1; yP <= y2; yP++)
+    {
+      myLamp.setLeds(myLamp.getPixelNumber(xP, yP), color);
     }
   }
 }
 
-void MoveFractionalNoiseX(int8_t amplitude = 1, float shift = 0) {
+void EffectComet::FillNoise(int8_t layer) {
+  const uint8_t e_centerX =  (WIDTH / 2) - 1;
+  const uint8_t e_centerY = (HEIGHT / 2) - 1;
+
+  for (uint8_t i = 0; i < WIDTH; i++) {
+    int32_t ioffset = e_scaleX[layer] * (i - e_centerX);
+    for (uint8_t j = 0; j < HEIGHT; j++) {
+      int32_t joffset = e_scaleY[layer] * (j - e_centerY);
+      int8_t data = inoise16(e_x[layer] + ioffset, e_y[layer] + joffset, e_z[layer]) >> 8;
+      int8_t olddata = noise3d[layer][i][j];
+      int8_t newdata = scale8( olddata, eNs_noisesmooth ) + scale8( data, 255 - eNs_noisesmooth );
+      data = newdata;
+      noise3d[layer][i][j] = data;
+    }
+  }
+}
+
+void EffectComet::MoveFractionalNoiseX(int8_t amplitude, float shift) {
   uint8_t zD;
   uint8_t zF;
   CRGB *leds = myLamp.getUnsafeLedsArray(); // unsafe
@@ -1578,7 +1569,7 @@ void MoveFractionalNoiseX(int8_t amplitude = 1, float shift = 0) {
 
   for(uint8_t i=0; i<NUM_LAYERS; i++)
     for (uint8_t y = 0; y < HEIGHT; y++) {
-      int16_t amount = ((int16_t)(GSHMEM.noise3d[i][0][y] - 128) * 2 * amplitude + shift * 256);
+      int16_t amount = ((int16_t)(noise3d[i][0][y] - 128) * 2 * amplitude + shift * 256);
       int8_t delta = ((uint16_t)abs(amount) >> 8) ;
       int8_t fraction = ((uint16_t)abs(amount) & 255);
       for (uint8_t x = 0 ; x < WIDTH; x++) {
@@ -1591,16 +1582,13 @@ void MoveFractionalNoiseX(int8_t amplitude = 1, float shift = 0) {
         if ((zD >= 0) && (zD < WIDTH)) PixelA = myLamp.getLeds(myLamp.getPixelNumber(zD%WIDTH, y%HEIGHT));
         CRGB PixelB = CRGB::Black ;
         if ((zF >= 0) && (zF < WIDTH)) PixelB = myLamp.getLeds(myLamp.getPixelNumber(zF%WIDTH, y%HEIGHT));
-        //myLamp.setLeds(myLamp.getPixelNumber(x, y), (PixelA.nscale8(ease8InOutApprox(255 - fraction))) + (PixelB.nscale8(ease8InOutApprox(fraction))));   // lerp8by8(PixelA, PixelB, fraction );
-        //((CRGB *)GSHMEM.ledsbuff)[myLamp.getPixelNumber(x, y)] = (PixelA.nscale8(ease8InOutApprox(255 - fraction))) + (PixelB.nscale8(ease8InOutApprox(fraction)));   // lerp8by8(PixelA, PixelB, fraction );
         ledsbuff[myLamp.getPixelNumber(x%WIDTH, y%HEIGHT)] = (PixelA.nscale8(ease8InOutApprox(255 - fraction))) + (PixelB.nscale8(ease8InOutApprox(fraction)));   // lerp8by8(PixelA, PixelB, fraction );
       }
     }
-  // memcpy(leds, GSHMEM.ledsbuff, sizeof(CRGB)* NUM_LEDS);
   memcpy(leds, ledsbuff, sizeof(CRGB)* NUM_LEDS);
 }
 
-void MoveFractionalNoiseY(int8_t amplitude = 1, float shift = 0) {
+void EffectComet::MoveFractionalNoiseY(int8_t amplitude, float shift) {
   uint8_t zD;
   uint8_t zF;
   CRGB *leds = myLamp.getUnsafeLedsArray(); // unsafe
@@ -1608,7 +1596,7 @@ void MoveFractionalNoiseY(int8_t amplitude = 1, float shift = 0) {
 
   for(uint8_t i=0; i<NUM_LAYERS; i++)
     for (uint8_t x = 0; x < WIDTH; x++) {
-      int16_t amount = ((int16_t)(GSHMEM.noise3d[i][x][0] - 128) * 2 * amplitude + shift * 256);
+      int16_t amount = ((int16_t)(noise3d[i][x][0] - 128) * 2 * amplitude + shift * 256);
       int8_t delta = (uint16_t)abs(amount) >> 8 ;
       int8_t fraction = (uint16_t)abs(amount) & 255;
       for (uint8_t y = 0 ; y < HEIGHT; y++) {
@@ -1621,27 +1609,33 @@ void MoveFractionalNoiseY(int8_t amplitude = 1, float shift = 0) {
         if ((zD >= 0) && (zD < HEIGHT)) PixelA = myLamp.getLeds(myLamp.getPixelNumber(x%WIDTH, zD%HEIGHT));
         CRGB PixelB = CRGB::Black ;
         if ((zF >= 0) && (zF < HEIGHT)) PixelB = myLamp.getLeds(myLamp.getPixelNumber(x%WIDTH, zF%HEIGHT));
-        //myLamp.setLeds(myLamp.getPixelNumber(x, y), (PixelA.nscale8(ease8InOutApprox(255 - fraction))) + (PixelB.nscale8(ease8InOutApprox(fraction))));
-        //((CRGB *)GSHMEM.ledsbuff)[myLamp.getPixelNumber(x, y)] = (PixelA.nscale8(ease8InOutApprox(255 - fraction))) + (PixelB.nscale8(ease8InOutApprox(fraction)));
         ledsbuff[myLamp.getPixelNumber(x%WIDTH, y%HEIGHT)] = (PixelA.nscale8(ease8InOutApprox(255 - fraction))) + (PixelB.nscale8(ease8InOutApprox(fraction)));
       }
     }
-  // memcpy(leds, GSHMEM.ledsbuff, sizeof(CRGB)* NUM_LEDS);
   memcpy(leds, ledsbuff, sizeof(CRGB)* NUM_LEDS);
 }
 
-void drawFillRect2_fast(int8_t x1, int8_t y1, int8_t x2, int8_t y2, CRGB color)
-{ // Fine if: 0<x1<x2<WIDTH && 0<y1<y2<HEIGHT
-  for (int8_t xP = x1; xP <= x2; xP++)
+void EffectComet::load(){
+    eNs_noisesmooth = random(0, 200*(uint_fast16_t)myLamp.effects.getSpeed()/255); // степень сглаженности шума 0...200
+}
+
+bool EffectComet::run(CRGB *ledarr, const char *opt){
+  uint8_t scale = myLamp.effects.getScale();  // автообновение шкалы
+
+  switch (effect)
   {
-    for (int8_t yP = y1; yP <= y2; yP++)
-    {
-      myLamp.setLeds(myLamp.getPixelNumber(xP, yP), color);
-    }
+  case EFF_ENUM::EFF_RAINBOWCOMET :
+    return rainbowCometRoutine(*&ledarr, &*opt);
+    break;
+  case EFF_ENUM::EFF_RAINBOWCOMET3 :
+    return rainbowComet3Routine(*&ledarr, &*opt);
+    break;
+  default:
+    return false;
   }
 }
 
-void rainbowCometRoutine(CRGB *leds, const char *param)
+bool EffectComet::rainbowCometRoutine(CRGB *leds, const char *param)
 { // Rainbow Comet by PalPalych
 /*
   Follow the Rainbow Comet Efect by PalPalych
@@ -1651,56 +1645,35 @@ void rainbowCometRoutine(CRGB *leds, const char *param)
           128...254 - selected color
           255 - white
 */
-  const uint8_t e_centerX =  (WIDTH / 2) - 1;
-  const uint8_t e_centerY = (HEIGHT / 2) - 1;
-  uint8_t Scale = myLamp.effects.getScale();
-
-
-  if(myLamp.isLoading()){
-    //randomSeed(millis());
-    GSHMEM.eNs_noisesmooth = random(0, 200*(uint_fast16_t)myLamp.effects.getSpeed()/255); // степень сглаженности шума 0...200
-    //for(uint8_t i=0; i<NUM_LAYERS;i++){
-        // GSHMEM.e_x[i] = random16();
-        // GSHMEM.e_y[i] = random16();
-        // GSHMEM.e_z[i] = random16();
-        // GSHMEM.e_scaleX[i] = 6000;
-        // GSHMEM.e_scaleY[i] = 6000;
-    //}
-    // memset(GSHMEM.e_x,0,sizeof(GSHMEM.e_x));
-    // memset(GSHMEM.e_y,0,sizeof(GSHMEM.e_y));
-    // memset(GSHMEM.e_z,0,sizeof(GSHMEM.e_z));
-    // memset(GSHMEM.e_scaleX,0,sizeof(GSHMEM.e_scaleX));
-    // memset(GSHMEM.e_scaleY,0,sizeof(GSHMEM.e_scaleY));
-    // memset(GSHMEM.noise3d,0,sizeof(GSHMEM.noise3d));
-  }
 
   myLamp.blur2d(e_com_BLUR);    // < -- размытие хвоста
   myLamp.dimAll(254);            // < -- затухание эффекта для последующего кадра
   CRGB _eNs_color = CRGB::White;
-  if (Scale <= 1) {
-    _eNs_color = CHSV(GSHMEM.noise3d[0][0][0] * e_com_3DCOLORSPEED , 255, 255);
-  } else if (Scale < 128) {
-    _eNs_color = CHSV(millis() / ((uint16_t)Scale + 1U) * 4 + 10, 255, 255);
-  } else if (Scale < 255) {
-    _eNs_color = CHSV((Scale - 128) * 2, 255, 255);
+  if (scale <= 1) {
+    _eNs_color = CHSV(noise3d[0][0][0] * e_com_3DCOLORSPEED , 255, 255);
+  } else if (scale < 128) {
+    _eNs_color = CHSV(millis() / ((uint16_t)scale + 1U) * 4 + 10, 255, 255);
+  } else {
+    _eNs_color = CHSV((scale - 128) * 2, 255, 255);
   }
   drawFillRect2_fast(e_centerX - 1, e_centerY - 1, e_centerX + 1, e_centerY + 1, _eNs_color);
   // Noise
   uint16_t sc = (uint16_t)myLamp.effects.getSpeed() * 30 + 500; //64 + 1000;
   uint16_t sc2 = (float)myLamp.effects.getSpeed()/127.0+1.5; //1.5...3.5;
   for(uint8_t i=0; i<NUM_LAYERS; i++){
-    GSHMEM.e_x[i] += e_com_TAILSPEED*sc2;
-    GSHMEM.e_y[i] += e_com_TAILSPEED*sc2;
-    GSHMEM.e_z[i] += e_com_TAILSPEED*sc2;
-    GSHMEM.e_scaleX[i] = sc; // 8000;
-    GSHMEM.e_scaleY[i] = sc; // 8000;
+    e_x[i] += e_com_TAILSPEED*sc2;
+    e_y[i] += e_com_TAILSPEED*sc2;
+    e_z[i] += e_com_TAILSPEED*sc2;
+    e_scaleX[i] = sc; // 8000;
+    e_scaleY[i] = sc; // 8000;
     FillNoise(i);
   }
   MoveFractionalNoiseX(WIDTH / 2U - 1U);
   MoveFractionalNoiseY(HEIGHT / 2U - 1U);
+  return true;
 }
 
-void rainbowComet3Routine(CRGB *leds, const char *param)
+bool EffectComet::rainbowComet3Routine(CRGB *leds, const char *param)
 { // Rainbow Comet by PalPalych
 /*
   Follow the Rainbow Comet Efect by PalPalych
@@ -1710,31 +1683,9 @@ void rainbowComet3Routine(CRGB *leds, const char *param)
           128...254 - selected color
           255 - white
 */
-  const uint8_t e_centerX =  (WIDTH / 2) - 1;
-  const uint8_t e_centerY = (HEIGHT / 2) - 1;
-  uint8_t Scale = myLamp.effects.getScale();
 
-
-  if(myLamp.isLoading()){
-    //randomSeed(millis());
-    GSHMEM.eNs_noisesmooth = random(0, 200*(uint_fast16_t)myLamp.effects.getSpeed()/255); // степень сглаженности шума 0...200
-    //for(uint8_t i=0; i<NUM_LAYERS;i++){
-        // GSHMEM.e_x[i] = random16();
-        // GSHMEM.e_y[i] = random16();
-        // GSHMEM.e_z[i] = random16();
-        // GSHMEM.e_scaleX[i] = 6000;
-        // GSHMEM.e_scaleY[i] = 6000;
-    //}
-    // memset(GSHMEM.e_x,0,sizeof(GSHMEM.e_x));
-    // memset(GSHMEM.e_y,0,sizeof(GSHMEM.e_y));
-    // memset(GSHMEM.e_z,0,sizeof(GSHMEM.e_z));
-    // memset(GSHMEM.e_scaleX,0,sizeof(GSHMEM.e_scaleX));
-    // memset(GSHMEM.e_scaleY,0,sizeof(GSHMEM.e_scaleY));
-    // memset(GSHMEM.noise3d,0,sizeof(GSHMEM.noise3d));
-  }
-
-  myLamp.blur2d(Scale/5+1);    // < -- размытие хвоста
-  myLamp.dimAll(255-Scale/66);            // < -- затухание эффекта для последующего кадра
+  myLamp.blur2d(scale/5+1);    // < -- размытие хвоста
+  myLamp.dimAll(255-scale/66);            // < -- затухание эффекта для последующего кадра
   byte xx = 2 + sin8( millis() / 10) / 22;
   byte yy = 2 + cos8( millis() / 9) / 22;
   myLamp.setLeds(myLamp.getPixelNumber( xx%WIDTH, yy%HEIGHT), 0x0000FF);
@@ -1747,15 +1698,16 @@ void rainbowComet3Routine(CRGB *leds, const char *param)
   uint16_t sc = (uint16_t)myLamp.effects.getSpeed() * 30 + 500; //64 + 1000;
   uint16_t sc2 = (float)myLamp.effects.getSpeed()/127.0+1.5; //1.5...3.5;
   for(uint8_t i=0; i<NUM_LAYERS; i++){
-    GSHMEM.e_x[i] += 1500*sc2;
-    GSHMEM.e_y[i] += 1500*sc2;
-    GSHMEM.e_z[i] += 1500*sc2;
-    GSHMEM.e_scaleX[i] = sc; // 8000;
-    GSHMEM.e_scaleY[i] = sc; // 8000;
+    e_x[i] += 1500*sc2;
+    e_y[i] += 1500*sc2;
+    e_z[i] += 1500*sc2;
+    e_scaleX[i] = sc; // 8000;
+    e_scaleY[i] = sc; // 8000;
     FillNoise(i);
   }
   MoveFractionalNoiseX(2);
   MoveFractionalNoiseY(2, 0.33);
+  return true;
 }
 
 // ============= ЭФФЕКТ ПРИЗМАТА =============== 
@@ -3417,12 +3369,12 @@ void multipleStreamSmokeRoutine(CRGB *leds, const char *param)
 
     GSHMEM.e_scaleX[0] = sc2;
     GSHMEM.e_scaleY[0] = sc2;
-    FillNoise(0);
+    ////FillNoise(0); to be fixed
     //MoveX(3);
     //MoveY(3);
 
-  MoveFractionalNoiseX(3);//4
-  MoveFractionalNoiseY(3);//4
+  //MoveFractionalNoiseX(3);//4 to be fixed
+  //MoveFractionalNoiseY(3);//4 to be fixed
 
   myLamp.blur2d(25); // без размытия как-то пиксельно, наверное...
 }
@@ -3433,6 +3385,10 @@ void multipleStreamSmokeRoutine(CRGB *leds, const char *param)
 void EffectWorker::workerset(EFF_ENUM effect){
   switch (effect)
   {
+  case EFF_ENUM::EFF_RAINBOWCOMET :
+  case EFF_ENUM::EFF_RAINBOWCOMET3 :
+    worker = std::unique_ptr<EffectComet>(new EffectComet());
+    break;
   case EFF_ENUM::EFF_FLOCK :
     worker = std::unique_ptr<EffectFlock>(new EffectFlock());
     break;

@@ -2722,113 +2722,97 @@ bool EffectFire2018::fire2018Routine(CRGB *leds, const char *param)
 ////ringHueShift2[ringsCount]; // обычная скорость переливания оттенка всего кольца -8 - +8 случайное число
 //uint8_t GSHMEM.currentRing; // кольцо, которое в настоящий момент нужно провернуть
 //uint8_t GSHMEM.stepCount; // оставшееся количество шагов, на которое нужно провернуть активное кольцо - случайное от WIDTH/5 до WIDTH-3
-void ringsRoutine(CRGB *leds, const char *param)
-{
-  if((millis() - myLamp.getEffDelay() - EFFECTS_RUN_TIMER) < (unsigned)((255-myLamp.effects.getSpeed())/3)){
-    return;
-  } else {
-    myLamp.setEffDelay(millis());
-  }  
+bool EffectRingsLock::run(CRGB *ledarr, const char *opt){
+  if (dryrun())
+    return false;
 
-    uint8_t h, x, y;
-    uint8_t ringWidth; // максимальне количество пикселей в кольце (толщина кольца) от 1 до height / 2 + 1
-    uint8_t ringNb; // количество колец от 2 до height
-    uint8_t downRingHue, upRingHue; // количество пикселей в нижнем (downRingHue) и верхнем (upRingHue) кольцах
+  ringsSet();
+  return ringsRoutine(*&ledarr, &*opt);
+}
 
-  const TProgmemRGBPalette16 *palette_arr[] = {&PartyColors_p, &OceanColors_p, &LavaColors_p, &HeatColors_p, &WaterfallColors_p, &CloudColors_p, &ForestColors_p, &RainbowColors_p, &RainbowStripeColors_p};
-  TProgmemRGBPalette16 const *curPalette;
-  uint8_t palleteCnt = sizeof(palette_arr)/sizeof(TProgmemRGBPalette16 *); // кол-во палитр
-  float ptPallete; // сколько пунктов приходится на одну палитру; 255.1 - диапазон ползунка, не включая 255, т.к. растягиваем только нужное :)
-  uint8_t pos; // позиция в массиве указателей паллитр
-  uint8_t curVal; // curVal == либо var как есть, либо getScale
-  String var = myLamp.effects.getCurrent()->getValue(myLamp.effects.getCurrent()->param, F("R"));
-  if(!var.isEmpty()){
-    ptPallete = 255.1/palleteCnt; // сколько пунктов приходится на одну палитру; 255.1 - диапазон ползунка, не включая 255, т.к. растягиваем только нужное :)
-    pos = (uint8_t)(var.toFloat()/ptPallete); // для 9 палитр будет 255.1/9==28.34, как следствие ползунок/28.34, при 1...28 будет давать 0, 227...255 -> 8
-    curVal = var.toInt();
-  } else {
-    ptPallete = 255.1/palleteCnt; // сколько пунктов приходится на одну палитру; 255.1 - диапазон ползунка, не включая 255, т.к. растягиваем только нужное :)
-    pos = (uint8_t)((float)myLamp.effects.getScale()/ptPallete);
-    curVal = myLamp.effects.getScale();
+// Установка параметров колец
+void EffectRingsLock::ringsSet(){
+  ringWidth = myLamp.effects.getScale()%11U + 1U; // толщина кольца от 1 до 11 для каждой из палитр
+  ringNb = (float)HEIGHT / ringWidth + ((HEIGHT % ringWidth == 0U) ? 0U : 1U)%HEIGHT; // количество колец
+  upRingHue = ringWidth - (ringWidth * ringNb - HEIGHT) / 2U; // толщина верхнего кольца. может быть меньше нижнего
+  downRingHue = HEIGHT - upRingHue - (ringNb - 2U) * ringWidth; // толщина нижнего кольца = всё оставшееся
+}
+
+void EffectRingsLock::load(){
+  palettesload();    // подгружаем дефолтные палитры
+  scalerefresh();    // выбираем палитру согласно "шкале"
+
+  ringsSet();
+  for (uint8_t i = 0; i < ringNb; i++)
+  {
+    ringColor[i] = random8(255U - WIDTH / 8U); // начальный оттенок кольца из палитры 0-255 за минусом длины кольца, делённой пополам
+    shiftHueDir[i] = random8();
+    huePos[i] = 0U; //random8(WIDTH); само прокрутится постепенно
+    stepCount = 0U;
+    //do { // песец конструкцию придумал бредовую
+    //  GSHMEM.stepCount = WIDTH - 3U - random8((WIDTH - 3U) * 2U); само присвоится при первом цикле
+    //} while (GSHMEM.stepCount < WIDTH / 5U || GSHMEM.stepCount > 255U - WIDTH / 5U);
+    currentRing = random8(ringNb);
   }
-  curPalette = palette_arr[pos]; // выбираем из доп. регулятора
-  uint8_t scale = curVal-ptPallete*pos; // разбиваю на поддиапазоны внутри диапазона, будет уходить в 0 на крайней позиции поддиапазона, ну и хрен с ним :), хотя нужно помнить!
+}
 
-    ringWidth = myLamp.effects.getScale()%11U + 1U; // толщина кольца от 1 до 11 для каждой из палитр
-    ringNb = (float)HEIGHT / ringWidth + ((HEIGHT % ringWidth == 0U) ? 0U : 1U)%HEIGHT; // количество колец
-    upRingHue = ringWidth - (ringWidth * ringNb - HEIGHT) / 2U; // толщина верхнего кольца. может быть меньше нижнего
-    downRingHue = HEIGHT - upRingHue - (ringNb - 2U) * ringWidth; // толщина нижнего кольца = всё оставшееся
-	
-    if (myLamp.isLoading())
+bool EffectRingsLock::ringsRoutine(CRGB *leds, const char *param)
+{
+  uint8_t h, x, y;
+
+  for (uint8_t i = 0; i < ringNb; i++)
+  {
+    if (i != currentRing) // если это не активное кольцо
     {
-      for (uint8_t i = 0; i < ringNb; i++)
-      {
-        GSHMEM.ringColor[i] = random8(255U - WIDTH / 8U); // начальный оттенок кольца из палитры 0-255 за минусом длины кольца, делённой пополам
-        GSHMEM.shiftHueDir[i] = random8();
-        GSHMEM.huePos[i] = 0U; //random8(WIDTH); само прокрутится постепенно
-        GSHMEM.stepCount = 0U;
-        //do { // песец конструкцию придумал бредовую
-        //  GSHMEM.stepCount = WIDTH - 3U - random8((WIDTH - 3U) * 2U); само присвоится при первом цикле
-        //} while (GSHMEM.stepCount < WIDTH / 5U || GSHMEM.stepCount > 255U - WIDTH / 5U);
-        GSHMEM.currentRing = random8(ringNb);
+       h = shiftHueDir[i] & 0x0F; // сдвигаем оттенок внутри кольца
+       if (h > 8U)
+         //GSHMEM.ringColor[i] += (uint8_t)(7U - h); // с такой скоростью сдвиг оттенка от вращения кольца не отличается
+         ringColor[i]--;
+       else
+         //GSHMEM.ringColor[i] += h;
+         ringColor[i]++;
+    } else {
+      if (stepCount == 0) { // если сдвиг активного кольца завершён, выбираем следующее
+        currentRing = random8(ringNb);
+        do {
+          stepCount = WIDTH - 3U - random8((WIDTH - 3U) * 2U); // проворот кольца от хз до хз
+        } while (stepCount < WIDTH / 5U || stepCount > 255U - WIDTH / 5U);
+      } else {
+        if (stepCount > 127U)
+          {
+            stepCount++;
+            huePos[i] = (huePos[i] + 1U) % WIDTH;
+          }
+        else
+          {
+            stepCount--;
+            huePos[i] = (huePos[i] - 1U + WIDTH) % WIDTH;
+          }
       }
     }
-    for (uint8_t i = 0; i < ringNb; i++)
+
+    // отрисовываем кольца
+    h = (shiftHueDir[i] >> 4) & 0x0F; // берём шаг для градиента вутри кольца
+    if (h > 8U)
+      h = 7U - h;
+    for (uint8_t j = 0U; j < ((i == 0U) ? downRingHue : ((i == ringNb - 1U) ? upRingHue : ringWidth)); j++) // от 0 до (толщина кольца - 1)
     {
-      if (i != GSHMEM.currentRing) // если это не активное кольцо
+      y = i * ringWidth + j - ((i == 0U) ? 0U : ringWidth - downRingHue);
+      for (uint8_t k = 0; k < WIDTH / 4U; k++) // Четверть кольца
         {
-          h = GSHMEM.shiftHueDir[i] & 0x0F; // сдвигаем оттенок внутри кольца
-          if (h > 8U)
-            //GSHMEM.ringColor[i] += (uint8_t)(7U - h); // с такой скоростью сдвиг оттенка от вращения кольца не отличается
-            GSHMEM.ringColor[i]--;
-          else
-            //GSHMEM.ringColor[i] += h;
-            GSHMEM.ringColor[i]++;
+          x = (huePos[i] + k) % WIDTH; // первая половина кольца
+          myLamp.setLeds(myLamp.getPixelNumber(x, y), ColorFromPalette(*curPalette, ringColor[i] + k * h));
+          x = (WIDTH - 1 + huePos[i] - k) % WIDTH; // вторая половина кольца (зеркальная первой)
+          myLamp.setLeds(myLamp.getPixelNumber(x, y), ColorFromPalette(*curPalette, ringColor[i] + k * h));
         }
-      else
-        {
-          if (GSHMEM.stepCount == 0) // если сдвиг активного кольца завершён, выбираем следующее
-            {
-              GSHMEM.currentRing = random8(ringNb);
-              do {
-                GSHMEM.stepCount = WIDTH - 3U - random8((WIDTH - 3U) * 2U); // проворот кольца от хз до хз
-              } while (GSHMEM.stepCount < WIDTH / 5U || GSHMEM.stepCount > 255U - WIDTH / 5U);
-            }
-          else
-            {
-              if (GSHMEM.stepCount > 127U)
-                {
-                  GSHMEM.stepCount++;
-                  GSHMEM.huePos[i] = (GSHMEM.huePos[i] + 1U) % WIDTH;
-                }
-              else
-                {
-                  GSHMEM.stepCount--;
-                  GSHMEM.huePos[i] = (GSHMEM.huePos[i] - 1U + WIDTH) % WIDTH;
-                }
-            }
-        }
-        // отрисовываем кольца
-        h = (GSHMEM.shiftHueDir[i] >> 4) & 0x0F; // берём шаг для градиента вутри кольца
-        if (h > 8U)
-          h = 7U - h;
-        for (uint8_t j = 0U; j < ((i == 0U) ? downRingHue : ((i == ringNb - 1U) ? upRingHue : ringWidth)); j++) // от 0 до (толщина кольца - 1)
-        {
-          y = i * ringWidth + j - ((i == 0U) ? 0U : ringWidth - downRingHue);
-          for (uint8_t k = 0; k < WIDTH / 4U; k++) // Четверть кольца
-            {
-              x = (GSHMEM.huePos[i] + k) % WIDTH; // первая половина кольца
-              myLamp.setLeds(myLamp.getPixelNumber(x, y), ColorFromPalette(*curPalette, GSHMEM.ringColor[i] + k * h));
-              x = (WIDTH - 1 + GSHMEM.huePos[i] - k) % WIDTH; // вторая половина кольца (зеркальная первой)
-              myLamp.setLeds(myLamp.getPixelNumber(x, y), ColorFromPalette(*curPalette, GSHMEM.ringColor[i] + k * h));
-            }
-          if (WIDTH & 0x01) //(WIDTH % 2U > 0U) // если число пикселей по ширине матрицы нечётное, тогда не забываем и про среднее значение
-          {
-            x = (GSHMEM.huePos[i] + WIDTH / 2U) % WIDTH;
-            myLamp.setLeds(myLamp.getPixelNumber(x, y), ColorFromPalette(*curPalette, GSHMEM.ringColor[i] + WIDTH / 2U * h));
-          }
-        }
+      if (WIDTH & 0x01) //(WIDTH % 2U > 0U) // если число пикселей по ширине матрицы нечётное, тогда не забываем и про среднее значение
+      {
+        x = (huePos[i] + WIDTH / 2U) % WIDTH;
+        myLamp.setLeds(myLamp.getPixelNumber(x, y), ColorFromPalette(*curPalette, ringColor[i] + WIDTH / 2U * h));
+      }
     }
+  }
+  return true;
 }
 
 // ------------------------------ ЭФФЕКТ КУБИК 2D ----------------------
@@ -3433,9 +3417,13 @@ void EffectWorker::workerset(EFF_ENUM effect){
   case EFF_ENUM::EFF_FIRE2018 :
     worker = std::unique_ptr<EffectFire2018>(new EffectFire2018());
     break;
+  case EFF_ENUM::EFF_RINGS :
+    worker = std::unique_ptr<EffectRingsLock>(new EffectRingsLock());
+    break;
   default:
     worker = std::unique_ptr<EffectCalc>(new EffectCalc());
   }
+
 
   worker->init(effect, myLamp.effects.getBrightness(), myLamp.effects.getSpeed(), myLamp.effects.getScale());
 

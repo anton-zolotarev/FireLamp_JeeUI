@@ -2198,44 +2198,44 @@ bool EffectTwinkles::twinklesRoutine(CRGB *leds, const char *param)
 // Copyright(c) 2014 Jason Coon
 // v1.0 - Updating for GuverLamp v1.7 by Palpalych 14.04.2020
 // v1.1 - +dither, +smoothing
+void EffectRadar::load(){
+  palettesload();    // подгружаем дефолтные палитры
+  scalerefresh();    // выбираем палитру согласно "шкале"
+}
 
-void radarRoutine(CRGB *leds, const char *param)
-{
-  const TProgmemRGBPalette16 *palette_arr[] = {&PartyColors_p, &OceanColors_p, &LavaColors_p, &HeatColors_p, &WaterfallColors_p, &CloudColors_p, &ForestColors_p, &RainbowColors_p, &RainbowStripeColors_p};
-  TProgmemRGBPalette16 const *curPalette;
-  uint8_t palleteCnt = sizeof(palette_arr)/sizeof(TProgmemRGBPalette16 *); // кол-во палитр
-  float ptPallete; // сколько пунктов приходится на одну палитру; 255.1 - диапазон ползунка, не включая 255, т.к. растягиваем только нужное :)
-  uint8_t pos; // позиция в массиве указателей паллитр
-  uint8_t curVal; // curVal == либо var как есть, либо getScale
-  String var = myLamp.effects.getCurrent()->getValue(myLamp.effects.getCurrent()->param, F("R"));
-  if(!var.isEmpty()){
-    ptPallete = 255.1/palleteCnt; // сколько пунктов приходится на одну палитру; 255.1 - диапазон ползунка, не включая 255, т.к. растягиваем только нужное :)
-    pos = (uint8_t)(var.toFloat()/ptPallete); // для 9 палитр будет 255.1/9==28.34, как следствие ползунок/28.34, при 1...28 будет давать 0, 227...255 -> 8
-    curVal = var.toInt();
-  } else {
-    ptPallete = 255.1/palleteCnt; // сколько пунктов приходится на одну палитру; 255.1 - диапазон ползунка, не включая 255, т.к. растягиваем только нужное :)
-    pos = (uint8_t)((float)myLamp.effects.getScale()/ptPallete);
-    curVal = myLamp.effects.getScale();
+bool EffectRadar::run(CRGB *ledarr, const char *opt){
+  /**
+   * дергаем костыль раз в секунду для обвления палитры/шкалы
+   */
+  EVERY_N_SECONDS(1){
+    scalerefresh();
   }
-  curPalette = palette_arr[pos]; // выбираем из доп. регулятора
-  uint8_t scale = curVal-ptPallete*pos; // разбиваю на поддиапазоны внутри диапазона, будет уходить в 0 на крайней позиции поддиапазона, ну и хрен с ним :), хотя нужно помнить!
+
+  return radarRoutine(*&ledarr, &*opt);
+}
+
+bool EffectRadar::radarRoutine(CRGB *leds, const char *param)
+{
+  if (curPalette == nullptr) {
+    return false;
+  }
 
   myLamp.blur2d(beatsin8(5U, 3U, 10U));
   myLamp.dimAll(255U - (0 + scale*3));
 
   for (uint8_t offset = 0U; offset < WIDTH / 2U - 1U; offset++)
   {
-    // TO BE FIXED
-    //myLamp.setLeds(myLamp.getPixelNumber(mapcos8(GSHMEM.eff_theta, offset, (WIDTH - 1U)-offset),
-    //               mapsin8(GSHMEM.eff_theta, offset, (WIDTH - 1U)-offset)),
-    //               ColorFromPalette(*curPalette, 255U - (offset * 16U + GSHMEM.eff_offset)));
+    myLamp.setLeds(myLamp.getPixelNumber(mapcos8(eff_theta, offset, (WIDTH - 1U)-offset),
+                   mapsin8(eff_theta, offset, (WIDTH - 1U)-offset)),
+                   ColorFromPalette(*curPalette, 255U - (offset * 16U + eff_offset)));
     
     EVERY_N_MILLIS(24)
     {
-      GSHMEM.eff_theta += 5.5*((myLamp.effects.getSpeed())/255.0)+1;
-      GSHMEM.eff_offset += 3.5*((255-myLamp.effects.getSpeed())/255.0)+1;
+      eff_theta += 5.5*((myLamp.effects.getSpeed())/255.0)+1;
+      eff_offset += 3.5*((255-myLamp.effects.getSpeed())/255.0)+1;
     }
   }
+  return true;
 }
 
 // ============= WAVES /  ВОЛНЫ ===============
@@ -3453,6 +3453,9 @@ void EffectWorker::workerset(EFF_ENUM effect){
     break;
   case EFF_ENUM::EFF_WAVES :
     worker = std::unique_ptr<EffectWaves>(new EffectWaves());
+    break;
+  case EFF_ENUM::EFF_RADAR :
+    worker = std::unique_ptr<EffectRadar>(new EffectRadar());
     break;
   default:
     worker = std::unique_ptr<EffectCalc>(new EffectCalc());

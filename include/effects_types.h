@@ -69,6 +69,10 @@ JeeUI2 lib used under MIT License Copyright (c) 2019 Marsel Akhkamov
  */
 
 typedef const TProgmemRGBPalette16 PGMPallete;
+#define MAP_SIN 1
+#define MAP_COS 0
+#define MOVE_X 1
+#define MOVE_Y 0
 #define FASTLED_PALETTS_COUNT 8
 
 /**

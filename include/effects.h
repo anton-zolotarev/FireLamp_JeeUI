@@ -629,17 +629,23 @@ public:
      */
     void scalerefresh();
 
-    /**
-     * Набор общих мат. функций, которые используют несколько эффектов
-     * может позже вынесем в отдельный класс если будет смысл
-     */
-    uint8_t mapsin8(uint8_t theta, uint8_t lowest = 0, uint8_t highest = 255);
-    uint8_t mapcos8(uint8_t theta, uint8_t lowest = 0, uint8_t highest = 255);
 
     /**
      * деструктор по-умолчанию пустой, может быть переопределен
      */
     virtual ~EffectCalc() = default;
+};
+
+/**
+ * Класс с набором статических мат. функций, которые используются в
+ * нескольких разных эффектах. Функции требующие большую статическую память
+ * сюда не переносим
+ *
+ */
+class EffectMath {
+public:
+  static uint8_t mapsincos8(bool map, uint8_t theta, uint8_t lowest = 0, uint8_t highest = 255);
+  static void MoveFractionalNoise(bool scale, const uint8_t noise3d[][WIDTH][HEIGHT], int8_t amplitude, float shift = 0);
 };
 
 class EffectMetaBalls : public EffectCalc {
@@ -921,8 +927,6 @@ private:
 
     void drawFillRect2_fast(int8_t x1, int8_t y1, int8_t x2, int8_t y2, CRGB color);
     void FillNoise(int8_t layer);
-    void MoveFractionalNoiseX(int8_t amplitude = 1, float shift = 0);
-    void MoveFractionalNoiseY(int8_t amplitude = 1, float shift = 0);
     bool rainbowCometRoutine(CRGB *leds, const char *param);
     bool rainbowComet3Routine(CRGB *leds, const char *param);
 

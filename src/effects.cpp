@@ -37,21 +37,6 @@ JeeUI2 lib used under MIT License Copyright (c) 2019 Marsel Akhkamov
 
 #include "main.h"
 
-  const TProgmemRGBPalette16 *firePalettes[] = {
-    &HeatColors2_p,
-    &WoodFireColors_p,
-    &NormalFire_p,
-    &NormalFire2_p,
-    &LithiumFireColors_p,
-    &SodiumFireColors_p,
-    &CopperFireColors_p,
-    &AlcoholFireColors_p,
-    &RubidiumFireColors_p,
-    &PotassiumFireColors_p};
-
-
-
-
 void EffectCalc::init(EFF_ENUM _eff, byte _brt, byte _spd, byte _scl){
   effect=_eff;
   brightness=_brt;
@@ -175,25 +160,49 @@ void EffectCalc::scalerefresh(){
   }
 }
 
-// ******** общие мат. функции переиспользуются в другом эффекте
-uint8_t EffectCalc::mapsin8(uint8_t theta, uint8_t lowest, uint8_t highest) {
-  uint8_t beatsin = sin8(theta);
-  uint8_t rangewidth = highest - lowest;
-  uint8_t scaledbeat = scale8(beatsin, rangewidth);
-  uint8_t result = lowest + scaledbeat;
-  return result;
-}
-
-uint8_t EffectCalc::mapcos8(uint8_t theta, uint8_t lowest, uint8_t highest) {
-  uint8_t beatcos = cos8(theta);
-  uint8_t rangewidth = highest - lowest;
-  uint8_t scaledbeat = scale8(beatcos, rangewidth);
-  uint8_t result = lowest + scaledbeat;
-  return result;
-}
-
 // непустой дефолтный деструктор (если понадобится)
 // EffectCalc::~EffectCalc(){LOG(println, "Effect object destroyed");}
+
+// ******** общие мат. функции переиспользуются в другом эффекте
+uint8_t EffectMath::mapsincos8(bool map, uint8_t theta, uint8_t lowest, uint8_t highest) {
+  uint8_t beat = map ? sin8(theta) : cos8(theta);
+  return lowest + scale8(beat, highest - lowest);
+}
+
+void EffectMath::MoveFractionalNoise(bool _scale, const uint8_t noise3d[][WIDTH][HEIGHT], int8_t amplitude, float shift) {
+  uint8_t zD;
+  uint8_t zF;
+  CRGB *leds = myLamp.getUnsafeLedsArray(); // unsafe
+  CRGB ledsbuff[NUM_LEDS];
+  uint16_t _side_a = _scale ? HEIGHT : WIDTH;
+  uint16_t _side_b = _scale ? WIDTH : HEIGHT;
+
+  for(uint8_t i=0; i<NUM_LAYERS; i++)
+    for (uint16_t a = 0; a < _side_a; a++) {
+      uint8_t _pixel = _scale ? noise3d[i][0][a] : noise3d[i][a][0];
+      int16_t amount = ((int16_t)(_pixel - 128) * 2 * amplitude + shift * 256);
+      int8_t delta = ((uint16_t)abs(amount) >> 8) ;
+      int8_t fraction = ((uint16_t)abs(amount) & 255);
+      for (uint8_t b = 0 ; b < _side_b; b++) {
+        if (amount < 0) {
+          zD = b - delta; zF = zD - 1;
+        } else {
+          zD = b + delta; zF = zD + 1;
+        }
+        CRGB PixelA = CRGB::Black  ;
+        if ((zD >= 0) && (zD < _side_b))
+          PixelA = _scale ? myLamp.getLeds(myLamp.getPixelNumber(zD%WIDTH, a%HEIGHT)) : myLamp.getLeds(myLamp.getPixelNumber(a%WIDTH, zD%HEIGHT));
+
+        CRGB PixelB = CRGB::Black ;
+        if ((zF >= 0) && (zF < _side_b))
+          PixelB = _scale ? myLamp.getLeds(myLamp.getPixelNumber(zF%WIDTH, a%HEIGHT)) : myLamp.getLeds(myLamp.getPixelNumber(a%WIDTH, zF%HEIGHT));
+        uint16_t x = _scale ? b : a;
+        uint16_t y = _scale ? a : b;
+        ledsbuff[myLamp.getPixelNumber(x%WIDTH, y%HEIGHT)] = (PixelA.nscale8(ease8InOutApprox(255 - fraction))) + (PixelB.nscale8(ease8InOutApprox(fraction)));   // lerp8by8(PixelA, PixelB, fraction );
+      }
+    }
+  memcpy(leds, ledsbuff, sizeof(CRGB)* NUM_LEDS);
+}
 
 //----------------------------------------------------
 void fadePixel(uint8_t i, uint8_t j, uint8_t step)          // новый фейдер
@@ -1481,10 +1490,10 @@ bool EffectSpiro::spiroRoutine(CRGB *leds, const char *param)
   //myLamp.dimAll(250-speed_factor*7);
   
   for (int i = 0; i < spirocount; i++) {
-    uint8_t x = mapsin8(spirotheta1 + i * spirooffset, spirominx, spiromaxx);
-    uint8_t y = mapcos8(spirotheta1 + i * spirooffset, spirominy, spiromaxy);
-    uint8_t x2 = mapsin8(spirotheta2 + i * spirooffset, x - spiroradiusx, x + spiroradiusx);
-    uint8_t y2 = mapcos8(spirotheta2 + i * spirooffset, y - spiroradiusy, y + spiroradiusy);
+    uint8_t  x = EffectMath::mapsincos8(MAP_SIN, spirotheta1 + i * spirooffset, spirominx, spiromaxx);
+    uint8_t  y = EffectMath::mapsincos8(MAP_COS, spirotheta1 + i * spirooffset, spirominy, spiromaxy);
+    uint8_t x2 = EffectMath::mapsincos8(MAP_SIN, spirotheta2 + i * spirooffset, x - spiroradiusx, x + spiroradiusx);
+    uint8_t y2 = EffectMath::mapsincos8(MAP_COS, spirotheta2 + i * spirooffset, y - spiroradiusy, y + spiroradiusy);
     CRGB color = ColorFromPalette(*curPalette, (spirohueoffset + i * spirooffset), 128U);
     if (x2<WIDTH && y2<HEIGHT){ // добавил проверки. не знаю, почему эффект подвисает без них
       CRGB tmpColor = myLamp.getPixColorXY(x2, y2);
@@ -1561,60 +1570,6 @@ void EffectComet::FillNoise(int8_t layer) {
   }
 }
 
-void EffectComet::MoveFractionalNoiseX(int8_t amplitude, float shift) {
-  uint8_t zD;
-  uint8_t zF;
-  CRGB *leds = myLamp.getUnsafeLedsArray(); // unsafe
-  CRGB ledsbuff[NUM_LEDS];
-
-  for(uint8_t i=0; i<NUM_LAYERS; i++)
-    for (uint8_t y = 0; y < HEIGHT; y++) {
-      int16_t amount = ((int16_t)(noise3d[i][0][y] - 128) * 2 * amplitude + shift * 256);
-      int8_t delta = ((uint16_t)abs(amount) >> 8) ;
-      int8_t fraction = ((uint16_t)abs(amount) & 255);
-      for (uint8_t x = 0 ; x < WIDTH; x++) {
-        if (amount < 0) {
-          zD = x - delta; zF = zD - 1;
-        } else {
-          zD = x + delta; zF = zD + 1;
-        }
-        CRGB PixelA = CRGB::Black  ;
-        if ((zD >= 0) && (zD < WIDTH)) PixelA = myLamp.getLeds(myLamp.getPixelNumber(zD%WIDTH, y%HEIGHT));
-        CRGB PixelB = CRGB::Black ;
-        if ((zF >= 0) && (zF < WIDTH)) PixelB = myLamp.getLeds(myLamp.getPixelNumber(zF%WIDTH, y%HEIGHT));
-        ledsbuff[myLamp.getPixelNumber(x%WIDTH, y%HEIGHT)] = (PixelA.nscale8(ease8InOutApprox(255 - fraction))) + (PixelB.nscale8(ease8InOutApprox(fraction)));   // lerp8by8(PixelA, PixelB, fraction );
-      }
-    }
-  memcpy(leds, ledsbuff, sizeof(CRGB)* NUM_LEDS);
-}
-
-void EffectComet::MoveFractionalNoiseY(int8_t amplitude, float shift) {
-  uint8_t zD;
-  uint8_t zF;
-  CRGB *leds = myLamp.getUnsafeLedsArray(); // unsafe
-  CRGB ledsbuff[NUM_LEDS];
-
-  for(uint8_t i=0; i<NUM_LAYERS; i++)
-    for (uint8_t x = 0; x < WIDTH; x++) {
-      int16_t amount = ((int16_t)(noise3d[i][x][0] - 128) * 2 * amplitude + shift * 256);
-      int8_t delta = (uint16_t)abs(amount) >> 8 ;
-      int8_t fraction = (uint16_t)abs(amount) & 255;
-      for (uint8_t y = 0 ; y < HEIGHT; y++) {
-        if (amount < 0) {
-          zD = y - delta; zF = zD - 1;
-        } else {
-          zD = y + delta; zF = zD + 1;
-        }
-        CRGB PixelA = CRGB::Black ;
-        if ((zD >= 0) && (zD < HEIGHT)) PixelA = myLamp.getLeds(myLamp.getPixelNumber(x%WIDTH, zD%HEIGHT));
-        CRGB PixelB = CRGB::Black ;
-        if ((zF >= 0) && (zF < HEIGHT)) PixelB = myLamp.getLeds(myLamp.getPixelNumber(x%WIDTH, zF%HEIGHT));
-        ledsbuff[myLamp.getPixelNumber(x%WIDTH, y%HEIGHT)] = (PixelA.nscale8(ease8InOutApprox(255 - fraction))) + (PixelB.nscale8(ease8InOutApprox(fraction)));
-      }
-    }
-  memcpy(leds, ledsbuff, sizeof(CRGB)* NUM_LEDS);
-}
-
 void EffectComet::load(){
     eNs_noisesmooth = random(0, 200*(uint_fast16_t)myLamp.effects.getSpeed()/255); // степень сглаженности шума 0...200
 }
@@ -1668,8 +1623,8 @@ bool EffectComet::rainbowCometRoutine(CRGB *leds, const char *param)
     e_scaleY[i] = sc; // 8000;
     FillNoise(i);
   }
-  MoveFractionalNoiseX(WIDTH / 2U - 1U);
-  MoveFractionalNoiseY(HEIGHT / 2U - 1U);
+  EffectMath::MoveFractionalNoise(MOVE_X, noise3d, WIDTH / 2U - 1U);
+  EffectMath::MoveFractionalNoise(MOVE_Y, noise3d, HEIGHT / 2U - 1U);
   return true;
 }
 
@@ -1705,8 +1660,8 @@ bool EffectComet::rainbowComet3Routine(CRGB *leds, const char *param)
     e_scaleY[i] = sc; // 8000;
     FillNoise(i);
   }
-  MoveFractionalNoiseX(2);
-  MoveFractionalNoiseY(2, 0.33);
+  EffectMath::MoveFractionalNoise(MOVE_X, noise3d, 2);
+  EffectMath::MoveFractionalNoise(MOVE_Y, noise3d, 2, 0.33);
   return true;
 }
 
@@ -2225,8 +2180,8 @@ bool EffectRadar::radarRoutine(CRGB *leds, const char *param)
 
   for (uint8_t offset = 0U; offset < WIDTH / 2U - 1U; offset++)
   {
-    myLamp.setLeds(myLamp.getPixelNumber(mapcos8(eff_theta, offset, (WIDTH - 1U)-offset),
-                   mapsin8(eff_theta, offset, (WIDTH - 1U)-offset)),
+    myLamp.setLeds(myLamp.getPixelNumber(EffectMath::mapsincos8(MAP_COS, eff_theta, offset, (WIDTH - 1U)-offset),
+                   EffectMath::mapsincos8(MAP_SIN, eff_theta, offset, (WIDTH - 1U)-offset)),
                    ColorFromPalette(*curPalette, 255U - (offset * 16U + eff_offset)));
     
     EVERY_N_MILLIS(24)
@@ -3351,8 +3306,8 @@ void multipleStreamSmokeRoutine(CRGB *leds, const char *param)
     //MoveX(3);
     //MoveY(3);
 
-  //MoveFractionalNoiseX(3);//4 to be fixed
-  //MoveFractionalNoiseY(3);//4 to be fixed
+////  EffectMath::MoveFractionalNoiseX(noise3d, 3);//4
+////  EffectMath::MoveFractionalNoiseY(noise3d, 3);//4
 
   myLamp.blur2d(25); // без размытия как-то пиксельно, наверное...
 }

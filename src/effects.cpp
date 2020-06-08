@@ -59,14 +59,14 @@ bool EffectCalc::run(CRGB* ledarr, const char *opt){
  * проверка на холостой вызов для эффектов с доп. задержкой
  */
 bool EffectCalc::dryrun(){
-  if((millis() - lastrun - EFFECTS_RUN_TIMER) < (unsigned)(255-speed)){
-    active=true;
+  if((millis() - lastrun - EFFECTS_RUN_TIMER) < (unsigned)(255-speed)/3){
+    active=false;
   } else {
     lastrun = millis();
-    active=false;
+    active=true;
   }
 
-  return active;
+  return !active;
 }
 
 /**
@@ -79,6 +79,7 @@ bool EffectCalc::status(){return active;}
  */
 void EffectCalc::setbrt(const byte _brt){
   brightness = _brt;
+  //LOG(printf, "Worker brt: %d\n", brightness);
 }
 
 /**
@@ -86,6 +87,7 @@ void EffectCalc::setbrt(const byte _brt){
  */
 void EffectCalc::setspd(const byte _spd){
   speed = _spd;
+  //LOG(printf, "Worker speed: %d\n", speed);
 }
 
 /**
@@ -93,6 +95,8 @@ void EffectCalc::setspd(const byte _spd){
  */
 void EffectCalc::setscl(byte _scl){
   scale = _scl;
+  //LOG(printf, "Worker scale: %d\n", scale);
+
   if (usepalettes)    // менять палитру в соответствие со шкалой, если выставлен флаг
   //  palettemap(palettes, _scl);
     scalerefresh();
@@ -2369,8 +2373,31 @@ bool EffectFire2012::fire2012Routine(CRGB *ledarr, const char *opt)
 // Array of temp cells (used by fire, theMatrix, coloredRain, stormyRain)
 // uint8_t **tempMatrix; = noise3d[0][WIDTH][HEIGHT]
 // uint8_t *splashArray; = line[WIDTH] из эффекта Огонь
+bool EffectRain::run(CRGB *ledarr, const char *opt){
+  if (dryrun())
+    return false;
 
-void rain(byte backgroundDepth, byte maxBrightness, byte spawnFreq, byte tailLength, CRGB rainColor, bool splashes, bool clouds, bool storm, bool fixRC = false)
+  EVERY_N_SECONDS(3){
+    LOG(printf, "speed: %d, scale: %d\n", speed, scale);
+  }
+
+  switch (effect)
+  {
+  case EFF_ENUM::EFF_RAIN :
+    return simpleRainRoutine(*&ledarr, &*opt);
+    break;
+  case EFF_ENUM::EFF_COLORRAIN :
+    return coloredRainRoutine(*&ledarr, &*opt);
+    break;
+  case EFF_ENUM::EFF_STORMYRAIN :
+    return stormyRainRoutine(*&ledarr, &*opt);
+    break;
+  default:
+    return false;
+  }
+}
+
+void EffectRain::rain(byte backgroundDepth, byte maxBrightness, byte spawnFreq, byte tailLength, CRGB rainColor, bool splashes, bool clouds, bool storm, bool fixRC)
 {
   // static uint16_t GSHMEM.noiseX = random16();
   // static uint16_t GSHMEM.noiseY = random16();
@@ -2395,18 +2422,18 @@ void rain(byte backgroundDepth, byte maxBrightness, byte spawnFreq, byte tailLen
     // Step 1.  Move each dot down one cell
     for (uint8_t i = 0; i < HEIGHT; i++)
     {
-      if (GSHMEM.noise3d[0][x][i] >= backgroundDepth)
+      if (noise3d[0][x][i] >= backgroundDepth)
       { // Don't move empty cells
         if (i > 0)
-          GSHMEM.noise3d[0][x][wrapY(i - 1)] = GSHMEM.noise3d[0][x][i];
-        GSHMEM.noise3d[0][x][i] = 0;
+          noise3d[0][x][wrapY(i - 1)] = noise3d[0][x][i];
+        noise3d[0][x][i] = 0;
       }
     }
 
     // Step 2.  Randomly spawn new dots at top
     if (random(255) < spawnFreq)
     {
-      GSHMEM.noise3d[0][x][HEIGHT - 1] = random(backgroundDepth, maxBrightness);
+      noise3d[0][x][HEIGHT - 1] = random(backgroundDepth, maxBrightness);
     }
 
     // Step 3. Map from tempMatrix cells to LED colors
@@ -2418,7 +2445,7 @@ void rain(byte backgroundDepth, byte maxBrightness, byte spawnFreq, byte tailLen
       // else if(!myLamp.getPixColor(myLamp.getPixelNumber(x, y)) && y!=(HEIGHT-1))
       //    color = CRGB::Black;
 
-      if (GSHMEM.noise3d[0][x][y] >= backgroundDepth)
+      if (noise3d[0][x][y] >= backgroundDepth)
       { // Don't write out empty cells
         // if(fixRC && color!=CRGB::Black){
         //   myLamp.setLeds(myLamp.getPixelNumber(x, y), color);
@@ -2426,7 +2453,7 @@ void rain(byte backgroundDepth, byte maxBrightness, byte spawnFreq, byte tailLen
         // else if(fixRC && y==(HEIGHT-1) && color==CRGB::Black)
         //   myLamp.setLeds(myLamp.getPixelNumber(x, y), ColorFromPalette(rain_p, GSHMEM.noise3d[0][x][y]));
         // else if(!fixRC)
-          myLamp.setLeds(myLamp.getPixelNumber(x, y), ColorFromPalette(rain_p, GSHMEM.noise3d[0][x][y]));
+          myLamp.setLeds(myLamp.getPixelNumber(x, y), ColorFromPalette(rain_p, noise3d[0][x][y]));
       }
     }
     //color = CRGB::Black;
@@ -2435,21 +2462,21 @@ void rain(byte backgroundDepth, byte maxBrightness, byte spawnFreq, byte tailLen
     if (splashes)
     {
       // FIXME, this is broken
-      byte j = GSHMEM.nline[x];
-      byte v = GSHMEM.noise3d[0][x][0];
+      byte j = nline[x];
+      byte v = noise3d[0][x][0];
 
       if (j >= backgroundDepth)
       {
         myLamp.setLeds(myLamp.getPixelNumber(wrapX(x - 2), 0), ColorFromPalette(rain_p, j / 3));
         myLamp.setLeds(myLamp.getPixelNumber(wrapX(x + 2), 0), ColorFromPalette(rain_p, j / 3));
-        GSHMEM.nline[x] = 0; // Reset splash
+        nline[x] = 0; // Reset splash
       }
 
       if (v >= backgroundDepth)
       {
         myLamp.setLeds(myLamp.getPixelNumber(wrapX(x - 1), 1), ColorFromPalette(rain_p, v / 2));
         myLamp.setLeds(myLamp.getPixelNumber(wrapX(x + 1), 1), ColorFromPalette(rain_p, v / 2));
-        GSHMEM.nline[x] = v; // Prep splash for next frame
+        nline[x] = v; // Prep splash for next frame
       }
     }
 
@@ -2516,23 +2543,23 @@ void rain(byte backgroundDepth, byte maxBrightness, byte spawnFreq, byte tailLen
       {
         Serial.println("noise malloc failed");
       }
-      int xoffset = noiseScale * x + GSHMEM.rhue;
+      int xoffset = noiseScale * x + rhue;
 
       for (int z = 0; z < cloudHeight; z++)
       {
-        int yoffset = noiseScale * z - GSHMEM.rhue;
+        int yoffset = noiseScale * z - rhue;
         uint8_t dataSmoothing = 192;
-        uint8_t noiseData = qsub8(inoise8(GSHMEM.noiseX + xoffset, GSHMEM.noiseY + yoffset, GSHMEM.noiseZ), 16);
+        uint8_t noiseData = qsub8(inoise8(noiseX + xoffset, noiseY + yoffset, noiseZ), 16);
         noiseData = qadd8(noiseData, scale8(noiseData, 39));
         noise[x * cloudHeight + z] = scale8(noise[x * cloudHeight + z], dataSmoothing) + scale8(noiseData, 256 - dataSmoothing);
         nblend(myLamp.getUnsafeLedsArray()[myLamp.getPixelNumber(x, HEIGHT - z - 1)], ColorFromPalette(rainClouds_p, noise[x * cloudHeight + z]), (cloudHeight - z) * (250 / cloudHeight));
       }
-      GSHMEM.noiseZ++;
+      noiseZ++;
     }
   }
 }
 
-uint8_t myScale8(uint8_t x)
+uint8_t EffectRain::myScale8(uint8_t x)
 { // даёт масштабировать каждые 8 градаций (от 0 до 7) бегунка Масштаб в значения от 0 до 255 по типа синусоиде
   uint8_t x8 = x % 8U;
   uint8_t x4 = x8 % 4U;
@@ -2547,58 +2574,44 @@ uint8_t myScale8(uint8_t x)
   return (253U - x4 * 72U); // 253U = 255U - 2U
 }
 
-void coloredRainRoutine(CRGB *leds, const char *param) // внимание! этот эффект заточен на работу бегунка Масштаб в диапазоне от 0 до 255. пока что единственный.
+bool EffectRain::coloredRainRoutine(CRGB *leds, const char *param) // внимание! этот эффект заточен на работу бегунка Масштаб в диапазоне от 0 до 255. пока что единственный.
 {
-  if((millis() - myLamp.getEffDelay() - EFFECTS_RUN_TIMER) < (unsigned)((255-myLamp.effects.getSpeed())/3)){
-    return;
-  } else {
-    myLamp.setEffDelay(millis());
-  }
-
   CRGB solidRainColor = CRGB(60, 80, 90);
   CRGB randomRainColor = CHSV(random(1,255), 255U, 255U);
   // я хз, как прикрутить а 1 регулятор и длину хвостов и цвет капель
   // ( Depth of dots, maximum brightness, frequency of new dots, length of tails, color, splashes, clouds, ligthening )
   //rain(60, 200, map8(intensity,5,100), 195, CRGB::Green, false, false, false); // было CRGB::Green
-  uint8_t Scale = myLamp.effects.getScale();
 
-  if (Scale > 255U-8U)
-    rain(60, 200, map8(42, 5, 100), (31*(Scale%8)), solidRainColor, false, false, false);  
-  else if (Scale > 255U-16U)
-    rain(60, 200, map8(42, 5, 100), (31*(Scale%8)), randomRainColor, false, false, false, true);
+  if (scale > 255U-8U)
+    rain(60, 200, map8(42, 5, 100), (31*(scale%8)), solidRainColor, false, false, false);  
+  else if (scale > 255U-16U)
+    rain(60, 200, map8(42, 5, 100), (31*(scale%8)), randomRainColor, false, false, false, true);
   else
-    rain(60, 200, map8(42, 5, 100), (31*(Scale%8)), CHSV(Scale, 255U, 255U), false, false, false);
+    rain(60, 200, map8(42, 5, 100), (31*(scale%8)), CHSV(scale, 255U, 255U), false, false, false);
+
+  return true;
 }
 
-void simpleRainRoutine(CRGB *leds, const char *param)
+bool EffectRain::simpleRainRoutine(CRGB *leds, const char *param)
 {
-  if((millis() - myLamp.getEffDelay() - EFFECTS_RUN_TIMER) < (unsigned)((255-myLamp.effects.getSpeed())/3)){
-    return;
-  } else {
-    myLamp.setEffDelay(millis());
-  }  
-  
   CRGB solidRainColor = CRGB(60, 80, 90);
-  uint8_t Scale = myLamp.effects.getScale();
+  //uint8_t Scale = myLamp.effects.getScale();
   // ( Depth of dots, maximum brightness, frequency of new dots, length of tails, color, splashes, clouds, ligthening )
   //rain(60, 200, map8(intensity,2,60), 10, solidRainColor, true, true, false);
-  rain(60, 180, Scale, 30, solidRainColor, true, true, false);
+  rain(60, 180, scale, 30, solidRainColor, true, true, false);
+  return true;
 }
 
-void stormyRainRoutine(CRGB *leds, const char *param)
+bool EffectRain::stormyRainRoutine(CRGB *leds, const char *param)
 {
-  if((millis() - myLamp.getEffDelay() - EFFECTS_RUN_TIMER) < (unsigned)((255-myLamp.effects.getSpeed())/3)){
-    return;
-  } else {
-    myLamp.setEffDelay(millis());
-  }
-
   CRGB solidRainColor = CRGB(60, 80, 90);
-  uint8_t Scale = myLamp.effects.getScale();  
+  //uint8_t Scale = myLamp.effects.getScale();  
   // ( Depth of dots, maximum brightness, frequency of new dots, length of tails, color, splashes, clouds, ligthening )
   //rain(0, 90, map8(intensity,0,150)+60, 10, solidRainColor, true, true, true);
-  rain(60, 160, Scale, 30, solidRainColor, true, true, true);
+  rain(60, 160, scale, 30, solidRainColor, true, true, true);
+  return true;
 }
+
 
 // ============= FIRE 2018 /  ОГОНЬ 2018 ===============
 // v1.0 - Updating for GuverLamp v1.7 by SottNick 17.04.2020
@@ -3398,6 +3411,11 @@ void EffectWorker::workerset(EFF_ENUM effect){
     break;
   case EFF_ENUM::EFF_CUBE2 :
     worker = std::unique_ptr<EffectCube2d>(new EffectCube2d());
+    break;
+  case EFF_ENUM::EFF_RAIN :
+  case EFF_ENUM::EFF_COLORRAIN :
+  case EFF_ENUM::EFF_STORMYRAIN :
+    worker = std::unique_ptr<EffectRain>(new EffectRain());
     break;
   default:
     worker = std::unique_ptr<EffectCalc>(new EffectCalc());

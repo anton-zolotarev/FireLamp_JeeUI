@@ -145,9 +145,9 @@ void BBallsRoutine(CRGB*, const char*);
 //void radarRoutine(CRGB*, const char*);
 //void wavesRoutine(CRGB*, const char*);
 //void fire2012Routine(CRGB*, const char*);
-void coloredRainRoutine(CRGB*, const char*);
-void simpleRainRoutine(CRGB*, const char*);
-void stormyRainRoutine(CRGB*, const char*);
+//void coloredRainRoutine(CRGB*, const char*);
+//void simpleRainRoutine(CRGB*, const char*);
+//void stormyRainRoutine(CRGB*, const char*);
 //void fire2018Routine(CRGB*, const char*);
 //void ringsRoutine(CRGB*, const char*);
 //void cube2dRoutine(CRGB*, const char *);
@@ -316,9 +316,9 @@ static EFFECT _EFFECTS_ARR[] = {
     {true, true, 127, 127, 127, EFF_WAVES, T_WAVES, stubRoutine, nullptr},
 //    {true, true, 127, 127, 127, EFF_FIRE2012, T_FIRE2012, fire2012Routine, nullptr},
     {true, true, 127, 127, 127, EFF_FIRE2012, T_FIRE2012, stubRoutine, nullptr},
-    {true, true, 127, 127, 127, EFF_RAIN, T_RAIN, simpleRainRoutine, nullptr},
-    {true, true, 127, 127, 127, EFF_COLORRAIN, T_COLORRAIN, coloredRainRoutine, nullptr},
-    {true, true, 127, 127, 127, EFF_STORMYRAIN, T_STORMYRAIN, stormyRainRoutine, nullptr},
+    {true, true, 127, 127, 127, EFF_RAIN, T_RAIN, stubRoutine, nullptr},
+    {true, true, 127, 127, 127, EFF_COLORRAIN, T_COLORRAIN, stubRoutine, nullptr},
+    {true, true, 127, 127, 127, EFF_STORMYRAIN, T_STORMYRAIN, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_FIRE2018, T_FIRE2018, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_RINGS, T_RINGS, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_CUBE2, T_CUBE2, stubRoutine, nullptr},
@@ -410,6 +410,7 @@ public:
             unsigned char matrixValue[8][16];
 		};
 */
+/*
         struct { // радужная комета / smoke / rain
             uint8_t eNs_noisesmooth;
             uint8_t rhue;
@@ -429,6 +430,7 @@ public:
             uint8_t noise3d[NUM_LAYERS][WIDTH][HEIGHT];
             //uint8_t ledsbuff[sizeof(CRGB)* NUM_LEDS];
         };
+*/
 /*
         struct { // стая
             bool predatorPresent;
@@ -1082,6 +1084,25 @@ public:
     bool run(CRGB *ledarr, const char *opt=nullptr) override;
 };
 
+class EffectRain : public EffectCalc {
+private:
+  uint16_t noiseX;
+  uint16_t noiseY;
+  uint16_t noiseZ;
+  uint8_t rhue;
+  uint8_t nline[WIDTH];
+  uint8_t noise3d[NUM_LAYERS][WIDTH][HEIGHT];
+
+  uint8_t myScale8(uint8_t x);
+  void rain(byte backgroundDepth, byte maxBrightness, byte spawnFreq, byte tailLength, CRGB rainColor, bool splashes, bool clouds, bool storm, bool fixRC = false);
+  bool coloredRainRoutine(CRGB *leds, const char *param);
+  bool stormyRainRoutine(CRGB *leds, const char *param);
+  bool simpleRainRoutine(CRGB *leds, const char *param);
+
+public:
+    bool run(CRGB *ledarr, const char *opt=nullptr) override;
+};
+
 
 class EffectWorker {
 private:
@@ -1203,9 +1224,9 @@ public:
         return true; // сохранились
     }
 
-    void setBrightness(byte val) {effects[arrIdx].brightness = val; if (worker) worker->setbrt(val);}
-    void setSpeed(byte val) {effects[arrIdx].speed = val; if (worker) worker->setspd(val);}
-    void setScale(byte val) {effects[arrIdx].scale = val; if (worker) worker->setscl(val);}
+    void setBrightness(byte val) {effects[arrIdx].brightness = val; worker->setbrt(val);}
+//    void setSpeed(byte val) {effects[arrIdx].speed = val; worker->setspd(val);}
+//    void setScale(byte val) {effects[arrIdx].scale = val; worker->setscl(val);}
     byte getBrightness() { return effects[arrIdx].brightness; }
     byte getSpeed() { return effects[arrIdx].speed; }
     byte getScale() { return effects[arrIdx].scale; }

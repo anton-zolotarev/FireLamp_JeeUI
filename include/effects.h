@@ -150,7 +150,7 @@ void simpleRainRoutine(CRGB*, const char*);
 void stormyRainRoutine(CRGB*, const char*);
 //void fire2018Routine(CRGB*, const char*);
 //void ringsRoutine(CRGB*, const char*);
-void cube2dRoutine(CRGB*, const char *);
+//void cube2dRoutine(CRGB*, const char *);
 //void multipleStreamSmokeRoutine(CRGB*, const char *);
 #ifdef MIC_EFFECTS
 void freqAnalyseRoutine(CRGB*, const char*);
@@ -321,7 +321,7 @@ static EFFECT _EFFECTS_ARR[] = {
     {true, true, 127, 127, 127, EFF_STORMYRAIN, T_STORMYRAIN, stormyRainRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_FIRE2018, T_FIRE2018, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_RINGS, T_RINGS, stubRoutine, nullptr},
-    {true, true, 127, 127, 127, EFF_CUBE2, T_CUBE2, cube2dRoutine, nullptr},
+    {true, true, 127, 127, 127, EFF_CUBE2, T_CUBE2, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_SMOKE, T_SMOKE, stubRoutine, ((char *)_R255)},  // очень хреновое приведение типов, но дальше это разрулим :)
     
 
@@ -491,6 +491,7 @@ public:
             uint8_t stepCount; // оставшееся количество шагов, на которое нужно провернуть активное кольцо - случайное от WIDTH/5 до WIDTH-3            
         };
 */
+/*
         struct { // cube2d
             bool direction; // направление вращения в данный момент
             uint8_t pauseSteps; // осталось шагов паузы
@@ -500,6 +501,7 @@ public:
             int8_t globalShiftX, globalShiftY; // нужно ли сдвинуть всё поле по окончаии цикла и в каком из направлений (-1, 0, +1)
             uint8_t storage[WIDTH][HEIGHT];
         };
+*/
         struct { // time
             bool timeShiftDir; // направление сдвига
             float curTimePos; // текущая позиция вывода
@@ -1054,6 +1056,26 @@ private:
 
   void ringsSet();
   bool ringsRoutine(CRGB *leds, const char *param);
+
+public:
+    void load() override;
+    bool run(CRGB *ledarr, const char *opt=nullptr) override;
+};
+
+class EffectCube2d : public EffectCalc {
+private:
+  uint8_t sizeX, sizeY; // размеры ячеек по горизонтали / вертикали
+  uint8_t cntX, cntY; // количество ячеек по горизонтали / вертикали
+
+  bool direction; // направление вращения в данный момент
+  uint8_t pauseSteps=0U; // осталось шагов паузы
+  uint8_t currentStep=4U; // текущий шаг сдвига (от 0 до GSHMEM.shiftSteps-1)
+  uint8_t shiftSteps=4U; // всего шагов сдвига (от 3 до 4)
+  uint8_t gX=0, gY=0; // глобальный X и глобальный Y нашего "кубика"
+  int8_t globalShiftX=0, globalShiftY=0; // нужно ли сдвинуть всё поле по окончаии цикла и в каком из направлений (-1, 0, +1)
+  uint8_t storage[WIDTH][HEIGHT];
+
+  bool cube2dRoutine(CRGB *leds, const char *param);
 
 public:
     void load() override;

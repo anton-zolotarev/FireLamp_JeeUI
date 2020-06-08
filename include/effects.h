@@ -143,7 +143,7 @@ void BBallsRoutine(CRGB*, const char*);
 //void incrementalDriftRoutine2(CRGB*, const char*);
 //void twinklesRoutine(CRGB*, const char*);
 void radarRoutine(CRGB*, const char*);
-void wavesRoutine(CRGB*, const char*);
+//void wavesRoutine(CRGB*, const char*);
 //void fire2012Routine(CRGB*, const char*);
 void coloredRainRoutine(CRGB*, const char*);
 void simpleRainRoutine(CRGB*, const char*);
@@ -313,7 +313,7 @@ static EFFECT _EFFECTS_ARR[] = {
     {true, true, 127, 127, 127, EFF_DRIFT2, T_DRIFT2, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_TWINKLES, T_TWINKLES, stubRoutine, ((char *)_R255)}, // очень хреновое приведение типов, но дальше это разрулим :)
     {true, true, 127, 127, 127, EFF_RADAR, T_RADAR, radarRoutine, nullptr},
-    {true, true, 127, 127, 127, EFF_WAVES, T_WAVES, wavesRoutine, nullptr},
+    {true, true, 127, 127, 127, EFF_WAVES, T_WAVES, stubRoutine, nullptr},
 //    {true, true, 127, 127, 127, EFF_FIRE2012, T_FIRE2012, fire2012Routine, nullptr},
     {true, true, 127, 127, 127, EFF_FIRE2012, T_FIRE2012, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_RAIN, T_RAIN, simpleRainRoutine, nullptr},
@@ -458,10 +458,12 @@ public:
             uint8_t eff_offset;        // глобальная переменная для работы эффектов (обычно применяется для циклического пересчета hue, количества кадров и др...)
             uint8_t eff_theta;         // глобальная переменная угла для работы эффектов
 		};
+/*
         struct { // волны
             uint8_t whue;
             uint8_t waveTheta;
 		};
+*/
         struct {
             int8_t peakX[2][WIDTH];
         };
@@ -955,6 +957,20 @@ private:
   uint8_t tnum;
   CRGB ledsbuff[NUM_LEDS];
   bool twinklesRoutine(CRGB *leds, const char *param);
+
+public:
+    void load() override;
+    bool run(CRGB *ledarr, const char *opt=nullptr) override;
+};
+
+class EffectWaves : public EffectCalc {
+private:
+  uint8_t waveCount = speed % 2;
+  const uint8_t waveScale = 256 / WIDTH;
+  uint8_t waveRotation;
+  uint8_t whue;
+  uint8_t waveTheta;
+  bool wavesRoutine(CRGB *leds, const char *param);
 
 public:
     void load() override;

@@ -2243,31 +2243,31 @@ void radarRoutine(CRGB *leds, const char *param)
 // v1.0 - Updating for GuverLamp v1.7 by SottNick 11.04.2020
 // https://github.com/pixelmatix/aurora/blob/master/PatternWave.h
 // Адаптация от (c) SottNick
-void wavesRoutine(CRGB *leds, const char *param)
-{
-  const uint8_t waveCount = myLamp.effects.getSpeed() % 2;
-  const uint8_t waveScale = 256 / WIDTH;
+void EffectWaves::load(){
+  palettesload();    // подгружаем дефолтные палитры
+  scalerefresh();    // выбираем палитру согласно "шкале"
+}
 
-  const TProgmemRGBPalette16 *palette_arr[] = {&PartyColors_p, &OceanColors_p, &LavaColors_p, &HeatColors_p, &WaterfallColors_p, &CloudColors_p, &ForestColors_p, &RainbowColors_p, &RainbowStripeColors_p};
-  TProgmemRGBPalette16 const *curPalette;
-  uint8_t palleteCnt = sizeof(palette_arr)/sizeof(TProgmemRGBPalette16 *); // кол-во палитр
-  float ptPallete; // сколько пунктов приходится на одну палитру; 255.1 - диапазон ползунка, не включая 255, т.к. растягиваем только нужное :)
-  uint8_t pos; // позиция в массиве указателей паллитр
-  uint8_t curVal; // curVal == либо var как есть, либо getScale
-  String var = myLamp.effects.getCurrent()->getValue(myLamp.effects.getCurrent()->param, F("R"));
-  if(!var.isEmpty()){
-    ptPallete = 255.1/palleteCnt; // сколько пунктов приходится на одну палитру; 255.1 - диапазон ползунка, не включая 255, т.к. растягиваем только нужное :)
-    pos = (uint8_t)(var.toFloat()/ptPallete); // для 9 палитр будет 255.1/9==28.34, как следствие ползунок/28.34, при 1...28 будет давать 0, 227...255 -> 8
-    curVal = var.toInt();
-  } else {
-    ptPallete = 255.1/palleteCnt; // сколько пунктов приходится на одну палитру; 255.1 - диапазон ползунка, не включая 255, т.к. растягиваем только нужное :)
-    pos = (uint8_t)((float)myLamp.effects.getScale()/ptPallete);
-    curVal = myLamp.effects.getScale();
+bool EffectWaves::run(CRGB *ledarr, const char *opt){
+  /**
+   * дергаем костыль раз в секунду для обвления палитры/шкалы
+   */
+  EVERY_N_SECONDS(1){
+    scalerefresh();
   }
-  curPalette = palette_arr[pos]; // выбираем из доп. регулятора
-  uint8_t scale = curVal-ptPallete*pos; // разбиваю на поддиапазоны внутри диапазона, будет уходить в 0 на крайней позиции поддиапазона, ну и хрен с ним :), хотя нужно помнить!
 
-  const uint8_t waveRotation = scale/8;
+  waveCount = myLamp.effects.getSpeed() % 2;
+  waveRotation = palettescale/8;  // тут ерунда какая-то... 
+                                  //  waveRotation нужно привести к 0...3 (из них 2 повторяются, чет/нечет?) почему делитель - 8?
+                                  //  верно ли тут выбирается не весь бегунок шкалы, а приведенная шкала в рамках палитры?
+  return wavesRoutine(*&ledarr, &*opt);
+}
+
+bool EffectWaves::wavesRoutine(CRGB *leds, const char *param)
+{
+  if (curPalette == nullptr) {
+    return false;
+  }
 
   myLamp.blur2d(20); // @Palpalych советует делать размытие. вот в этом эффекте его явно не хватает...
   myLamp.dimAll(254);
@@ -2276,48 +2276,31 @@ void wavesRoutine(CRGB *leds, const char *param)
   switch (waveRotation)
   {
   case 0:
+  case 2:
     for (uint8_t x = 0; x < WIDTH; x++)
     {
-      n = quadwave8(x * 2 + GSHMEM.waveTheta) / waveScale;
-      myLamp.drawPixelXY(x, n, ColorFromPalette(*curPalette, GSHMEM.whue + x));
+      n = quadwave8(x * 2 + waveTheta) / waveScale;
+      myLamp.drawPixelXY(x, n, ColorFromPalette(*curPalette, whue + x));
       if (waveCount != 1)
-        myLamp.drawPixelXY(x, HEIGHT - 1 - n, ColorFromPalette(*curPalette, GSHMEM.whue + x));
+        myLamp.drawPixelXY(x, HEIGHT - 1 - n, ColorFromPalette(*curPalette, whue + x));
     }
     break;
 
   case 1:
-    for (uint8_t y = 0; y < HEIGHT; y++)
-    {
-      n = quadwave8(y * 2 + GSHMEM.waveTheta) / waveScale;
-      myLamp.drawPixelXY(n, y, ColorFromPalette(*curPalette, GSHMEM.whue + y));
-      if (waveCount != 1)
-        myLamp.drawPixelXY(WIDTH - 1 - n, y, ColorFromPalette(*curPalette, GSHMEM.whue + y));
-    }
-    break;
-
-  case 2:
-    for (uint8_t x = 0; x < WIDTH; x++)
-    {
-      n = quadwave8(x * 2 - GSHMEM.waveTheta) / waveScale;
-      myLamp.drawPixelXY(x, n, ColorFromPalette(*curPalette, GSHMEM.whue + x));
-      if (waveCount != 1)
-        myLamp.drawPixelXY(x, HEIGHT - 1 - n, ColorFromPalette(*curPalette, GSHMEM.whue + x));
-    }
-    break;
-
   case 3:
     for (uint8_t y = 0; y < HEIGHT; y++)
     {
-      n = quadwave8(y * 2 - GSHMEM.waveTheta) / waveScale;
-      myLamp.drawPixelXY(n, y, ColorFromPalette(*curPalette, GSHMEM.whue + y));
+      n = quadwave8(y * 2 + waveTheta) / waveScale;
+      myLamp.drawPixelXY(n, y, ColorFromPalette(*curPalette, whue + y));
       if (waveCount != 1)
-        myLamp.drawPixelXY(WIDTH - 1 - n, y, ColorFromPalette(*curPalette, GSHMEM.whue + y));
+        myLamp.drawPixelXY(WIDTH - 1 - n, y, ColorFromPalette(*curPalette, whue + y));
     }
     break;
   }
 
-  GSHMEM.waveTheta+=5*(myLamp.effects.getSpeed()/255.0)+1.0;
-  GSHMEM.whue+=myLamp.effects.getSpeed()/10.0+1;
+  waveTheta+=5*(myLamp.effects.getSpeed()/255.0)+1.0;
+  whue+=myLamp.effects.getSpeed()/10.0+1;
+  return true;
 }
 
 // ============= FIRE 2012 /  ОГОНЬ 2012 ===============
@@ -3467,6 +3450,9 @@ void EffectWorker::workerset(EFF_ENUM effect){
     break;
   case EFF_ENUM::EFF_TWINKLES :
     worker = std::unique_ptr<EffectTwinkles>(new EffectTwinkles());
+    break;
+  case EFF_ENUM::EFF_WAVES :
+    worker = std::unique_ptr<EffectWaves>(new EffectWaves());
     break;
   default:
     worker = std::unique_ptr<EffectCalc>(new EffectCalc());

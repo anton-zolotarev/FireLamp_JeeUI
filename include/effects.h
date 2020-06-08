@@ -148,7 +148,7 @@ void BBallsRoutine(CRGB*, const char*);
 void coloredRainRoutine(CRGB*, const char*);
 void simpleRainRoutine(CRGB*, const char*);
 void stormyRainRoutine(CRGB*, const char*);
-void fire2018Routine(CRGB*, const char*);
+//void fire2018Routine(CRGB*, const char*);
 void ringsRoutine(CRGB*, const char*);
 void cube2dRoutine(CRGB*, const char *);
 //void multipleStreamSmokeRoutine(CRGB*, const char *);
@@ -319,7 +319,7 @@ static EFFECT _EFFECTS_ARR[] = {
     {true, true, 127, 127, 127, EFF_RAIN, T_RAIN, simpleRainRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_COLORRAIN, T_COLORRAIN, coloredRainRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_STORMYRAIN, T_STORMYRAIN, stormyRainRoutine, nullptr},
-    {true, true, 127, 127, 127, EFF_FIRE2018, T_FIRE2018, fire2018Routine, nullptr},
+    {true, true, 127, 127, 127, EFF_FIRE2018, T_FIRE2018, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_RINGS, T_RINGS, ringsRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_CUBE2, T_CUBE2, cube2dRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_SMOKE, T_SMOKE, stubRoutine, ((char *)_R255)},  // очень хреновое приведение типов, но дальше это разрулим :)
@@ -469,6 +469,7 @@ public:
         struct {
             int8_t peakX[2][WIDTH];
         };
+/*
         struct { // огонь2018
             uint32_t noise32_x[NUM_LAYERS2];
             uint32_t noise32_y[NUM_LAYERS2];
@@ -478,6 +479,7 @@ public:
             uint8_t fire18heat[NUM_LEDS];
             uint8_t noise3dx[NUM_LAYERS2][WIDTH][HEIGHT];
         };
+*/
         struct { // кодовый замок
             uint8_t ringColor[HEIGHT]; // начальный оттенок каждого кольца (оттенка из палитры) 0-255
             uint8_t huePos[HEIGHT]; // местоположение начального оттенка кольца 0-WIDTH-1
@@ -1010,6 +1012,25 @@ private:
 
   void FillNoise(int8_t layer);     // TODO: join with Comet's
   bool multipleStreamSmokeRoutine(CRGB *leds, const char *param);
+
+public:
+    bool run(CRGB *ledarr, const char *opt=nullptr) override;
+};
+
+class EffectFire2018 : public EffectCalc {
+private:
+  const uint8_t CentreY = HEIGHT / 2 + (HEIGHT % 2);
+  const uint8_t CentreX = WIDTH / 2 + (WIDTH % 2);
+
+  uint32_t noise32_x[NUM_LAYERS2];
+  uint32_t noise32_y[NUM_LAYERS2];
+  uint32_t noise32_z[NUM_LAYERS2];
+  uint32_t scale32_x[NUM_LAYERS2];
+  uint32_t scale32_y[NUM_LAYERS2];
+  uint8_t fire18heat[NUM_LEDS];
+  uint8_t noise3dx[NUM_LAYERS2][WIDTH][HEIGHT];
+
+  bool fire2018Routine(CRGB *leds, const char *param);
 
 public:
     bool run(CRGB *ledarr, const char *opt=nullptr) override;

@@ -2604,20 +2604,16 @@ void stormyRainRoutine(CRGB *leds, const char *param)
 // v1.0 - Updating for GuverLamp v1.7 by SottNick 17.04.2020
 // https://gist.github.com/StefanPetrick/819e873492f344ebebac5bcd2fdd8aa8
 // https://gist.github.com/StefanPetrick/1ba4584e534ba99ca259c1103754e4c5
+bool EffectFire2018::run(CRGB *ledarr, const char *opt){
+  if (dryrun())
+    return false;
+  return fire2018Routine(*&ledarr, &*opt);
+}
 
-void fire2018Routine(CRGB *leds, const char *param)
+bool EffectFire2018::fire2018Routine(CRGB *leds, const char *param)
 {
-  if((millis() - myLamp.getEffDelay() - EFFECTS_RUN_TIMER) < (unsigned)((255-myLamp.effects.getSpeed())/3)){
-    return;
-  } else {
-    myLamp.setEffDelay(millis());
-  }  
-
-  uint8_t Scale = myLamp.effects.getScale();
+  scale = myLamp.effects.getScale();  // костыль, пока внутренний скейл не обновляется
   //uint8_t Speed = myLamp.effects.getSpeed();
-
-  const uint8_t CentreY = HEIGHT / 2 + (HEIGHT % 2);
-  const uint8_t CentreX = WIDTH / 2 + (WIDTH % 2);
 
   // some changing values
   uint16_t ctrl1 = inoise16(11 * millis(), 0, 0);
@@ -2625,52 +2621,52 @@ void fire2018Routine(CRGB *leds, const char *param)
   uint16_t ctrl = ((ctrl1 + ctrl2) / 2);
 
   // parameters for the heatmap
-  uint16_t speed = 25;
-  GSHMEM.noise32_x[0] = 3 * ctrl * speed;
-  GSHMEM.noise32_y[0] = 20 * millis() * speed;
-  GSHMEM.noise32_z[0] = 5 * millis() * speed;
-  GSHMEM.scale32_x[0] = ctrl1 / 2;
-  GSHMEM.scale32_y[0] = ctrl2 / 2;
+  uint16_t _speed = 25;     // speed пересекается с переменной в родительском классе
+  noise32_x[0] = 3 * ctrl * _speed;
+  noise32_y[0] = 20 * millis() * _speed;
+  noise32_z[0] = 5 * millis() * _speed;
+  scale32_x[0] = ctrl1 / 2;
+  scale32_y[0] = ctrl2 / 2;
 
   //calculate the noise data
   uint8_t layer = 0;
 
   for (uint8_t i = 0; i < WIDTH; i++)
   {
-    uint32_t ioffset = GSHMEM.scale32_x[layer] * (i - CentreX);
+    uint32_t ioffset = scale32_x[layer] * (i - CentreX);
     for (uint8_t j = 0; j < HEIGHT; j++)
     {
-      uint32_t joffset = GSHMEM.scale32_y[layer] * (j - CentreY);
-      uint16_t data = ((inoise16(GSHMEM.noise32_x[layer] + ioffset, GSHMEM.noise32_y[layer] + joffset, GSHMEM.noise32_z[layer])) + 1);
-      GSHMEM.noise3dx[layer][i][j] = data >> 8;
+      uint32_t joffset = scale32_y[layer] * (j - CentreY);
+      uint16_t data = ((inoise16(noise32_x[layer] + ioffset, noise32_y[layer] + joffset, noise32_z[layer])) + 1);
+      noise3dx[layer][i][j] = data >> 8;
     }
   }
 
   // parameters for te brightness mask
-  speed = 20;
-  GSHMEM.noise32_x[1] = 3 * ctrl * speed;
-  GSHMEM.noise32_y[1] = 20 * millis() * speed;
-  GSHMEM.noise32_z[1] = 5 * millis() * speed;
-  GSHMEM.scale32_x[1] = ctrl1 / 2;
-  GSHMEM.scale32_y[1] = ctrl2 / 2;
+  _speed = 20;
+  noise32_x[1] = 3 * ctrl * _speed;
+  noise32_y[1] = 20 * millis() * _speed;
+  noise32_z[1] = 5 * millis() * _speed;
+  scale32_x[1] = ctrl1 / 2;
+  scale32_y[1] = ctrl2 / 2;
 
   //calculate the noise data
   layer = 1;
   for (uint8_t i = 0; i < WIDTH; i++)
   {
-    uint32_t ioffset = GSHMEM.scale32_x[layer] * (i - CentreX);
+    uint32_t ioffset = scale32_x[layer] * (i - CentreX);
     for (uint8_t j = 0; j < HEIGHT; j++)
     {
-      uint32_t joffset = GSHMEM.scale32_y[layer] * (j - CentreY);
-      uint16_t data = ((inoise16(GSHMEM.noise32_x[layer] + ioffset, GSHMEM.noise32_y[layer] + joffset, GSHMEM.noise32_z[layer])) + 1);
-      GSHMEM.noise3dx[layer][i][j] = data >> 8;
+      uint32_t joffset = scale32_y[layer] * (j - CentreY);
+      uint16_t data = ((inoise16(noise32_x[layer] + ioffset, noise32_y[layer] + joffset, noise32_z[layer])) + 1);
+      noise3dx[layer][i][j] = data >> 8;
     }
   }
 
   // draw lowest line - seed the fire
   for (uint8_t x = 0; x < WIDTH; x++)
   {
-    GSHMEM.fire18heat[myLamp.getPixelNumber(x, HEIGHT - 1)] = GSHMEM.noise3dx[0][WIDTH - 1 - x][CentreY - 1]; // хз, почему взято с середины. вожможно, нужно просто с 7 строки вне зависимости от высоты матрицы
+    fire18heat[myLamp.getPixelNumber(x, HEIGHT - 1)] = noise3dx[0][WIDTH - 1 - x][CentreY - 1]; // хз, почему взято с середины. вожможно, нужно просто с 7 строки вне зависимости от высоты матрицы
   }
 
   //copy everything one line up
@@ -2678,7 +2674,7 @@ void fire2018Routine(CRGB *leds, const char *param)
   {
     for (uint8_t x = 0; x < WIDTH; x++)
     {
-      GSHMEM.fire18heat[myLamp.getPixelNumber(x, y)] = GSHMEM.fire18heat[myLamp.getPixelNumber(x, y + 1)];
+      fire18heat[myLamp.getPixelNumber(x, y)] = fire18heat[myLamp.getPixelNumber(x, y + 1)];
     }
   }
 
@@ -2687,11 +2683,11 @@ void fire2018Routine(CRGB *leds, const char *param)
   {
     for (uint8_t x = 0; x < WIDTH; x++)
     {
-      uint8_t dim = GSHMEM.noise3dx[0][x][y];
+      uint8_t dim = noise3dx[0][x][y];
       // high value = high flames
       dim = dim / 1.7 * constrain(0.05*myLamp.effects.getBrightness()+0.01,0.01,1.0);
       dim = 255 - dim;
-      GSHMEM.fire18heat[myLamp.getPixelNumber(x, y)] = scale8(GSHMEM.fire18heat[myLamp.getPixelNumber(x, y)], dim);
+      fire18heat[myLamp.getPixelNumber(x, y)] = scale8(fire18heat[myLamp.getPixelNumber(x, y)], dim);
     }
   }
 
@@ -2704,13 +2700,14 @@ void fire2018Routine(CRGB *leds, const char *param)
       //myLamp.setLeds(myLamp.getPixelNumber(x, HEIGHT - 1 - y), CRGB( GSHMEM.fire18heat[myLamp.getPixelNumber(x, y)], GSHMEM.fire18heat[myLamp.getPixelNumber(x, y)] * 0.153, 0));
       //myLamp.setLeds(myLamp.getPixelNumber(x, HEIGHT - 1 - y), CHSV(Scale, 255-GSHMEM.fire18heat[myLamp.getPixelNumber(x, y)], constrain(GSHMEM.fire18heat[myLamp.getPixelNumber(x, y)]*10,1,255)));
       //nblend(myLamp.getUnsafeLedsArray()[myLamp.getPixelNumber(x, HEIGHT - 1 - y)], CRGB( GSHMEM.fire18heat[myLamp.getPixelNumber(x, y)], GSHMEM.fire18heat[myLamp.getPixelNumber(x, y)] * 0.153, 0), 200);
-      CRGB color = CRGB(GSHMEM.fire18heat[myLamp.getPixelNumber(x, y)], (float)GSHMEM.fire18heat[myLamp.getPixelNumber(x, y)] * (Scale/5.0) * 0.01, 0); color*=2.5;
+      CRGB color = CRGB(fire18heat[myLamp.getPixelNumber(x, y)], (float)fire18heat[myLamp.getPixelNumber(x, y)] * (scale/5.0) * 0.01, 0); color*=2.5;
       myLamp.setLeds(myLamp.getPixelNumber(x, HEIGHT - 1 - y), color);
 
       // dim the result based on 2nd noise layer
-      myLamp.getUnsafeLedsArray()[myLamp.getPixelNumber(x, HEIGHT - 1 - y)].nscale8(GSHMEM.noise3dx[1][x][y]);
+      myLamp.getUnsafeLedsArray()[myLamp.getPixelNumber(x, HEIGHT - 1 - y)].nscale8(noise3dx[1][x][y]);
     }
   }
+  return true;
 }
 
 // ------------------------------ ЭФФЕКТ КОЛЬЦА / КОДОВЫЙ ЗАМОК ----------------------
@@ -3432,6 +3429,9 @@ void EffectWorker::workerset(EFF_ENUM effect){
     break;
   case EFF_ENUM::EFF_SMOKE :
     worker = std::unique_ptr<EffectMStreamSmoke>(new EffectMStreamSmoke());
+    break;
+  case EFF_ENUM::EFF_FIRE2018 :
+    worker = std::unique_ptr<EffectFire2018>(new EffectFire2018());
     break;
   default:
     worker = std::unique_ptr<EffectCalc>(new EffectCalc());

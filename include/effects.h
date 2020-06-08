@@ -139,8 +139,8 @@ void BBallsRoutine(CRGB*, const char*);
 //void prismataRoutine(CRGB*, const char*);
 //void flockRoutine(CRGB*, const char*);
 //void swirlRoutine(CRGB*, const char*);
-void incrementalDriftRoutine(CRGB*, const char*);
-void incrementalDriftRoutine2(CRGB*, const char*);
+//void incrementalDriftRoutine(CRGB*, const char*);
+//void incrementalDriftRoutine2(CRGB*, const char*);
 void twinklesRoutine(CRGB*, const char*);
 void radarRoutine(CRGB*, const char*);
 void wavesRoutine(CRGB*, const char*);
@@ -309,8 +309,8 @@ static EFFECT _EFFECTS_ARR[] = {
     {true, true, 127, 127, 127, EFF_PRIZMATA, T_PRIZMATA, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_FLOCK, T_FLOCK, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_SWIRL, T_SWIRL, stubRoutine, nullptr},
-    {true, true, 127, 127, 127, EFF_DRIFT, T_DRIFT, incrementalDriftRoutine, nullptr},
-    {true, true, 127, 127, 127, EFF_DRIFT2, T_DRIFT2, incrementalDriftRoutine2, nullptr},
+    {true, true, 127, 127, 127, EFF_DRIFT, T_DRIFT, stubRoutine, nullptr},
+    {true, true, 127, 127, 127, EFF_DRIFT2, T_DRIFT2, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_TWINKLES, T_TWINKLES, twinklesRoutine, ((char *)_R255)}, // очень хреновое приведение типов, но дальше это разрулим :)
     {true, true, 127, 127, 127, EFF_RADAR, T_RADAR, radarRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_WAVES, T_WAVES, wavesRoutine, nullptr},
@@ -443,9 +443,11 @@ public:
             time_t startmillis;
             CHSV dawnColorMinus[6];
 		};
+/*
         struct { // дрифты
             uint8_t dri_phase;
 		};
+*/
         struct { // мерцание
             uint8_t thue;
             CRGB ledsbuff[NUM_LEDS];
@@ -925,8 +927,20 @@ public:
 
 class EffectSwirl : public EffectCalc {
 private:
+    bool swirlRoutine(CRGB *leds, const char *param);
 
-  bool swirlRoutine(CRGB *leds, const char *param);
+public:
+    void load() override;
+    bool run(CRGB *ledarr, const char *opt=nullptr) override;
+};
+
+class EffectDrift : public EffectCalc {
+private:
+  uint8_t dri_phase;
+  uint8_t _dri_speed;
+  uint8_t _dri_delta;
+  bool incrementalDriftRoutine(CRGB *leds, const char *param);
+  bool incrementalDriftRoutine2(CRGB *leds, const char *param);
 
 public:
     void load() override;

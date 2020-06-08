@@ -1893,82 +1893,73 @@ bool EffectSwirl::swirlRoutine(CRGB *leds, const char *param)
   return true;
 }
 
-#define CENTER_max  max(WIDTH / 2, HEIGHT / 2) // Наибольшее значение центра
-#define WIDTH_steps  256U / WIDTH   // диапазон значений приходящихся на 1 пиксель ширины матрицы
-#define HEIGHT_steps 256U / HEIGHT // диапазон значений приходящихся на 1 пиксель высоты матрицы
 // ============= DRIFT / ДРИФТ ===============
 // v1.0 - Updating for GuverLamp v1.7 by SottNick 12.04.2020
 // v1.1 - +dither, +phase shifting by PalPalych 12.04.2020
 // https://github.com/pixelmatix/aurora/blob/master/PatternIncrementalDrift.h
-void incrementalDriftRoutine(CRGB *leds, const char *param)
-{
-  const TProgmemRGBPalette16 *palette_arr[] = {&PartyColors_p, &OceanColors_p, &LavaColors_p, &HeatColors_p, &WaterfallColors_p, &CloudColors_p, &ForestColors_p, &RainbowColors_p, &RainbowStripeColors_p};
-  TProgmemRGBPalette16 const *curPalette;
-  uint8_t palleteCnt = sizeof(palette_arr)/sizeof(TProgmemRGBPalette16 *); // кол-во палитр
-  float ptPallete; // сколько пунктов приходится на одну палитру; 255.1 - диапазон ползунка, не включая 255, т.к. растягиваем только нужное :)
-  uint8_t pos; // позиция в массиве указателей паллитр
-  uint8_t curVal; // curVal == либо var как есть, либо getScale
-  String var = myLamp.effects.getCurrent()->getValue(myLamp.effects.getCurrent()->param, F("R"));
-  if(!var.isEmpty()){
-    ptPallete = 255.1/palleteCnt; // сколько пунктов приходится на одну палитру; 255.1 - диапазон ползунка, не включая 255, т.к. растягиваем только нужное :)
-    pos = (uint8_t)(var.toFloat()/ptPallete); // для 9 палитр будет 255.1/9==28.34, как следствие ползунок/28.34, при 1...28 будет давать 0, 227...255 -> 8
-    curVal = var.toInt();
-  } else {
-    ptPallete = 255.1/palleteCnt; // сколько пунктов приходится на одну палитру; 255.1 - диапазон ползунка, не включая 255, т.к. растягиваем только нужное :)
-    pos = (uint8_t)((float)myLamp.effects.getScale()/ptPallete);
-    curVal = myLamp.effects.getScale();
+#define CENTER_max  max(WIDTH / 2, HEIGHT / 2) // Наибольшее значение центра
+#define WIDTH_steps  256U / WIDTH   // диапазон значений приходящихся на 1 пиксель ширины матрицы
+#define HEIGHT_steps 256U / HEIGHT // диапазон значений приходящихся на 1 пиксель высоты матрицы
+
+void EffectDrift::load(){
+  palettesload();    // подгружаем дефолтные палитры
+  scalerefresh();    // выбираем палитру согласно "шкале"
+}
+
+bool EffectDrift::run(CRGB *ledarr, const char *opt){
+  /**
+   * дергаем костыль раз в секунду для обвления палитры/шкалы
+   */
+  EVERY_N_SECONDS(1){
+    scalerefresh();
   }
-  curPalette = palette_arr[pos]; // выбираем из доп. регулятора
-  uint8_t scale = curVal-ptPallete*pos; // разбиваю на поддиапазоны внутри диапазона, будет уходить в 0 на крайней позиции поддиапазона, ну и хрен с ним :), хотя нужно помнить!
 
   myLamp.blur2d(beatsin8(3U, 5, 10 + scale*3));
   myLamp.dimAll(beatsin8(2U, 246, 252));
-  uint8_t _dri_speed = map8(myLamp.effects.getSpeed(), 1U, 20U);
-  uint8_t _dri_delta = beatsin8(1U);
-  EVERY_N_MILLIS(13){
-  GSHMEM.dri_phase++;
+  _dri_speed = map8(myLamp.effects.getSpeed(), 1U, 20U);
+  _dri_delta = beatsin8(1U);
+  //EVERY_N_MILLIS(13){
+    dri_phase++;    // 13 ms это примерно каждый кадр и есть
+  //}
+
+  switch (effect)
+  {
+  case EFF_ENUM::EFF_DRIFT :
+    return incrementalDriftRoutine(*&ledarr, &*opt);
+    break;
+  case EFF_ENUM::EFF_DRIFT2 :
+    return incrementalDriftRoutine2(*&ledarr, &*opt);
+    break;
+  default:
+    return false;
   }
+}
+
+bool EffectDrift::incrementalDriftRoutine(CRGB *leds, const char *param)
+{
+  if (curPalette == nullptr) {
+    return false;
+  }
+
   for (uint8_t i = 1; i < WIDTH / 2U; i++) // возможно, стоит здесь использовать const MINLENGTH
   {
-    int8_t x = beatsin8((CENTER_max - i) * _dri_speed, WIDTH / 2U - 1 - i, WIDTH / 2U - 1 + 1U + i, 0, 64U + GSHMEM.dri_phase); // используем константы центра матрицы из эффекта Кометы
-    int8_t y = beatsin8((CENTER_max - i) * _dri_speed, WIDTH / 2U - 1 - i, WIDTH / 2U - 1 + 1U + i, 0, GSHMEM.dri_phase);       // используем константы центра матрицы из эффекта Кометы
+    int8_t x = beatsin8((CENTER_max - i) * _dri_speed, WIDTH / 2U - 1 - i, WIDTH / 2U - 1 + 1U + i, 0, 64U + dri_phase); // используем константы центра матрицы из эффекта Кометы
+    int8_t y = beatsin8((CENTER_max - i) * _dri_speed, WIDTH / 2U - 1 - i, WIDTH / 2U - 1 + 1U + i, 0, dri_phase);       // используем константы центра матрицы из эффекта Кометы
     myLamp.setLeds(myLamp.getPixelNumber(x, y), ColorFromPalette(*curPalette, (i - 1U) * WIDTH_steps * 2U + _dri_delta) ); // используем массив палитр из других эффектов выше
   }
+  return true;
 }
 
 // ============= DRIFT 2 / ДРИФТ 2 ===============
 // v1.0 - Updating for GuverLamp v1.7 by SottNick 12.04.2020
 // v1.1 - +dither, +phase shifting by PalPalych 12.04.2020
 // https://github.com/pixelmatix/aurora/blob/master/PatternIncrementalDrift2.h
-void incrementalDriftRoutine2(CRGB *leds, const char *param)
+bool EffectDrift::incrementalDriftRoutine2(CRGB *leds, const char *param)
 {
-  const TProgmemRGBPalette16 *palette_arr[] = {&PartyColors_p, &OceanColors_p, &LavaColors_p, &HeatColors_p, &WaterfallColors_p, &CloudColors_p, &ForestColors_p, &RainbowColors_p, &RainbowStripeColors_p};
-  TProgmemRGBPalette16 const *curPalette;
-  uint8_t palleteCnt = sizeof(palette_arr)/sizeof(TProgmemRGBPalette16 *); // кол-во палитр
-  float ptPallete; // сколько пунктов приходится на одну палитру; 255.1 - диапазон ползунка, не включая 255, т.к. растягиваем только нужное :)
-  uint8_t pos; // позиция в массиве указателей паллитр
-  uint8_t curVal; // curVal == либо var как есть, либо getScale
-  String var = myLamp.effects.getCurrent()->getValue(myLamp.effects.getCurrent()->param, F("R"));
-  if(!var.isEmpty()){
-    ptPallete = 255.1/palleteCnt; // сколько пунктов приходится на одну палитру; 255.1 - диапазон ползунка, не включая 255, т.к. растягиваем только нужное :)
-    pos = (uint8_t)(var.toFloat()/ptPallete); // для 9 палитр будет 255.1/9==28.34, как следствие ползунок/28.34, при 1...28 будет давать 0, 227...255 -> 8
-    curVal = var.toInt();
-  } else {
-    ptPallete = 255.1/palleteCnt; // сколько пунктов приходится на одну палитру; 255.1 - диапазон ползунка, не включая 255, т.к. растягиваем только нужное :)
-    pos = (uint8_t)((float)myLamp.effects.getScale()/ptPallete);
-    curVal = myLamp.effects.getScale();
+  if (curPalette == nullptr) {
+    return false;
   }
-  curPalette = palette_arr[pos]; // выбираем из доп. регулятора
-  uint8_t scale = curVal-ptPallete*pos; // разбиваю на поддиапазоны внутри диапазона, будет уходить в 0 на крайней позиции поддиапазона, ну и хрен с ним :), хотя нужно помнить!
 
-  myLamp.blur2d(beatsin8(3U, 5, 10 + scale*3));
-  myLamp.dimAll(beatsin8(2U, 224, 252));
-  uint8_t _dri_speed = map8(myLamp.effects.getSpeed(), 1U, 15U);
-  uint8_t _dri_delta = beatsin8(1U);
-  EVERY_N_MILLIS(13)
-  {
-    GSHMEM.dri_phase++;
-  }
   for (uint8_t i = 0; i < WIDTH; i++)
   {
     int8_t x = 0;
@@ -1976,18 +1967,19 @@ void incrementalDriftRoutine2(CRGB *leds, const char *param)
     CRGB color;
     if (i < WIDTH / 2U)
     {
-      x = beatsin8((i + 1) * _dri_speed, i + 1U, WIDTH - 1 - i, 0, 64U + GSHMEM.dri_phase);
-      y = beatsin8((i + 1) * _dri_speed, i + 1U, HEIGHT - 1 - i, 0, GSHMEM.dri_phase);
+      x = beatsin8((i + 1) * _dri_speed, i + 1U, WIDTH - 1 - i, 0, 64U + dri_phase);
+      y = beatsin8((i + 1) * _dri_speed, i + 1U, HEIGHT - 1 - i, 0, dri_phase);
       color = ColorFromPalette(*curPalette, i * WIDTH_steps * 2U + _dri_delta);
     }
     else
     {
-      x = beatsin8((WIDTH - i) * _dri_speed, WIDTH - 1 - i, i + 1U, 0, GSHMEM.dri_phase);
-      y = beatsin8((HEIGHT - i) * _dri_speed, HEIGHT - 1 - i, i + 1U, 0, 64U + GSHMEM.dri_phase);
+      x = beatsin8((WIDTH - i) * _dri_speed, WIDTH - 1 - i, i + 1U, 0, dri_phase);
+      y = beatsin8((HEIGHT - i) * _dri_speed, HEIGHT - 1 - i, i + 1U, 0, 64U + dri_phase);
       color = ColorFromPalette(*curPalette, ~(i * WIDTH_steps * 2U + _dri_delta));
     }
     myLamp.setLeds(myLamp.getPixelNumber(x, y), color);
   }
+  return true;
 }
 
 // Частотный (спектральный) анализатор
@@ -3466,6 +3458,10 @@ void EffectWorker::workerset(EFF_ENUM effect){
   case EFF_ENUM::EFF_FOREST :
   case EFF_ENUM::EFF_OCEAN :
     worker = std::unique_ptr<Effect3DNoise>(new Effect3DNoise());
+    break;
+  case EFF_ENUM::EFF_DRIFT :
+  case EFF_ENUM::EFF_DRIFT2 :
+    worker = std::unique_ptr<EffectDrift>(new EffectDrift());
     break;
   default:
     worker = std::unique_ptr<EffectCalc>(new EffectCalc());

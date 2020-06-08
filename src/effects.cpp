@@ -1841,28 +1841,27 @@ bool EffectFlock::flockRoutine(CRGB *leds, const char *param) {
 // v1.1 - +dither by PalPalych 12.04.2020
 // Aurora: https://github.com/pixelmatix/aurora
 // Copyright (c) 2014 Jason Coon
+void EffectSwirl::load(){
+  palettesload();    // подгружаем дефолтные палитры
+  scalerefresh();    // выбираем палитру согласно "шкале"
+}
+
+bool EffectSwirl::run(CRGB *ledarr, const char *opt){
+  /**
+   * дергаем костыль раз в секунду для обвления палитры/шкалы
+   */
+  EVERY_N_SECONDS(1){
+    scalerefresh();
+  }
+  return swirlRoutine(*&ledarr, &*opt);
+}
 
 #define e_swi_BORDER (1U)  // размытие экрана за активный кадр
-void swirlRoutine(CRGB *leds, const char *param)
+bool EffectSwirl::swirlRoutine(CRGB *leds, const char *param)
 {
-  const TProgmemRGBPalette16 *palette_arr[] = {&PartyColors_p, &OceanColors_p, &LavaColors_p, &HeatColors_p, &WaterfallColors_p, &CloudColors_p, &ForestColors_p, &RainbowColors_p, &RainbowStripeColors_p};
-  TProgmemRGBPalette16 const *curPalette;
-  uint8_t palleteCnt = sizeof(palette_arr)/sizeof(TProgmemRGBPalette16 *); // кол-во палитр
-  float ptPallete; // сколько пунктов приходится на одну палитру; 255.1 - диапазон ползунка, не включая 255, т.к. растягиваем только нужное :)
-  uint8_t pos; // позиция в массиве указателей паллитр
-  uint8_t curVal; // curVal == либо var как есть, либо getScale
-  String var = myLamp.effects.getCurrent()->getValue(myLamp.effects.getCurrent()->param, F("R"));
-  if(!var.isEmpty()){
-    ptPallete = 255.1/palleteCnt; // сколько пунктов приходится на одну палитру; 255.1 - диапазон ползунка, не включая 255, т.к. растягиваем только нужное :)
-    pos = (uint8_t)(var.toFloat()/ptPallete); // для 9 палитр будет 255.1/9==28.34, как следствие ползунок/28.34, при 1...28 будет давать 0, 227...255 -> 8
-    curVal = var.toInt();
-  } else {
-    ptPallete = 255.1/palleteCnt; // сколько пунктов приходится на одну палитру; 255.1 - диапазон ползунка, не включая 255, т.к. растягиваем только нужное :)
-    pos = (uint8_t)((float)myLamp.effects.getScale()/ptPallete);
-    curVal = myLamp.effects.getScale();
+  if (curPalette == nullptr) {
+    return false;
   }
-  curPalette = palette_arr[pos]; // выбираем из доп. регулятора
-  uint8_t scale = curVal-ptPallete*pos; // разбиваю на поддиапазоны внутри диапазона, будет уходить в 0 на крайней позиции поддиапазона, ну и хрен с ним :), хотя нужно помнить!
 
   // Apply some blurring to whatever's already on the matrix
   // Note that we never actually clear the matrix, we just constantly
@@ -1890,6 +1889,8 @@ void swirlRoutine(CRGB *leds, const char *param)
   myLamp.setLeds(myLamp.getPixelNumber(nj, ni),CRGB(myLamp.getPixColorXY(nj, ni)) + ColorFromPalette(*curPalette, ms / 29));
   myLamp.setLeds(myLamp.getPixelNumber(i, nj),CRGB(myLamp.getPixColorXY(i, nj)) + ColorFromPalette(*curPalette, ms / 37));
   myLamp.setLeds(myLamp.getPixelNumber(ni, j),CRGB(myLamp.getPixColorXY(ni, j)) + ColorFromPalette(*curPalette, ms / 41));
+
+  return true;
 }
 
 #define CENTER_max  max(WIDTH / 2, HEIGHT / 2) // Наибольшее значение центра
@@ -3385,6 +3386,9 @@ void multipleStreamSmokeRoutine(CRGB *leds, const char *param)
 void EffectWorker::workerset(EFF_ENUM effect){
   switch (effect)
   {
+  case EFF_ENUM::EFF_SWIRL :
+    worker = std::unique_ptr<EffectSwirl>(new EffectSwirl());
+    break;
   case EFF_ENUM::EFF_RAINBOWCOMET :
   case EFF_ENUM::EFF_RAINBOWCOMET3 :
     worker = std::unique_ptr<EffectComet>(new EffectComet());

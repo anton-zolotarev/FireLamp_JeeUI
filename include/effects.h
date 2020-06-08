@@ -138,7 +138,7 @@ void BBallsRoutine(CRGB*, const char*);
 //void rainbowComet3Routine(CRGB*, const char*);
 //void prismataRoutine(CRGB*, const char*);
 //void flockRoutine(CRGB*, const char*);
-void swirlRoutine(CRGB*, const char*);
+//void swirlRoutine(CRGB*, const char*);
 void incrementalDriftRoutine(CRGB*, const char*);
 void incrementalDriftRoutine2(CRGB*, const char*);
 void twinklesRoutine(CRGB*, const char*);
@@ -308,7 +308,7 @@ static EFFECT _EFFECTS_ARR[] = {
     {true, true, 127, 127, 127, EFF_RAINBOWCOMET3, T_RAINBOWCOMET3, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_PRIZMATA, T_PRIZMATA, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_FLOCK, T_FLOCK, stubRoutine, nullptr},
-    {true, true, 127, 127, 127, EFF_SWIRL, T_SWIRL, swirlRoutine, nullptr},
+    {true, true, 127, 127, 127, EFF_SWIRL, T_SWIRL, stubRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_DRIFT, T_DRIFT, incrementalDriftRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_DRIFT2, T_DRIFT2, incrementalDriftRoutine2, nullptr},
     {true, true, 127, 127, 127, EFF_TWINKLES, T_TWINKLES, twinklesRoutine, ((char *)_R255)}, // очень хреновое приведение типов, но дальше это разрулим :)
@@ -917,6 +917,16 @@ private:
     void MoveFractionalNoiseY(int8_t amplitude = 1, float shift = 0);
     bool rainbowCometRoutine(CRGB *leds, const char *param);
     bool rainbowComet3Routine(CRGB *leds, const char *param);
+
+public:
+    void load() override;
+    bool run(CRGB *ledarr, const char *opt=nullptr) override;
+};
+
+class EffectSwirl : public EffectCalc {
+private:
+
+  bool swirlRoutine(CRGB *leds, const char *param);
 
 public:
     void load() override;

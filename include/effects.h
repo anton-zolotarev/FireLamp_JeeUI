@@ -151,7 +151,7 @@ void stormyRainRoutine(CRGB*, const char*);
 void fire2018Routine(CRGB*, const char*);
 void ringsRoutine(CRGB*, const char*);
 void cube2dRoutine(CRGB*, const char *);
-void multipleStreamSmokeRoutine(CRGB*, const char *);
+//void multipleStreamSmokeRoutine(CRGB*, const char *);
 #ifdef MIC_EFFECTS
 void freqAnalyseRoutine(CRGB*, const char*);
 #endif
@@ -322,7 +322,7 @@ static EFFECT _EFFECTS_ARR[] = {
     {true, true, 127, 127, 127, EFF_FIRE2018, T_FIRE2018, fire2018Routine, nullptr},
     {true, true, 127, 127, 127, EFF_RINGS, T_RINGS, ringsRoutine, nullptr},
     {true, true, 127, 127, 127, EFF_CUBE2, T_CUBE2, cube2dRoutine, nullptr},
-    {true, true, 127, 127, 127, EFF_SMOKE, T_SMOKE, multipleStreamSmokeRoutine, ((char *)_R255)},  // очень хреновое приведение типов, но дальше это разрулим :)
+    {true, true, 127, 127, 127, EFF_SMOKE, T_SMOKE, stubRoutine, ((char *)_R255)},  // очень хреновое приведение типов, но дальше это разрулим :)
     
 
     {true, true, 127, 127, 127, EFF_TIME, T_TIME, timePrintRoutine, nullptr}
@@ -413,9 +413,9 @@ public:
         struct { // радужная комета / smoke / rain
             uint8_t eNs_noisesmooth;
             uint8_t rhue;
-            uint8_t smokeHue;
-            float xSmokePos;
-            float xSmokePos2;
+            //uint8_t smokeHue;
+            //float xSmokePos;
+            //float xSmokePos2;
             uint16_t noiseX;
             uint16_t noiseY;
             uint16_t noiseZ;
@@ -994,6 +994,26 @@ public:
     bool run(CRGB *ledarr, const char *opt=nullptr) override;
 };
 
+class EffectMStreamSmoke : public EffectCalc {
+private:
+  uint8_t smokeHue = 0U;
+  float xSmokePos;
+  float xSmokePos2;
+  uint8_t eNs_noisesmooth;
+  uint8_t rhue;
+  uint32_t e_x[NUM_LAYERS];
+  uint32_t e_y[NUM_LAYERS];
+  uint32_t e_z[NUM_LAYERS];
+  uint32_t e_scaleX[NUM_LAYERS];
+  uint32_t e_scaleY[NUM_LAYERS];
+  uint8_t noise3d[NUM_LAYERS][WIDTH][HEIGHT];
+
+  void FillNoise(int8_t layer);     // TODO: join with Comet's
+  bool multipleStreamSmokeRoutine(CRGB *leds, const char *param);
+
+public:
+    bool run(CRGB *ledarr, const char *opt=nullptr) override;
+};
 
 
 class EffectWorker {

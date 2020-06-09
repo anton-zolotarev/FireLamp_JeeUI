@@ -1225,8 +1225,8 @@ public:
     }
 
     void setBrightness(byte val) {effects[arrIdx].brightness = val; worker->setbrt(val);}
-//    void setSpeed(byte val) {effects[arrIdx].speed = val; worker->setspd(val);}
-//    void setScale(byte val) {effects[arrIdx].scale = val; worker->setscl(val);}
+    void setSpeed(byte val) {effects[arrIdx].speed = val; worker->setspd(val);}
+    void setScale(byte val) {effects[arrIdx].scale = val; worker->setscl(val);}
     byte getBrightness() { return effects[arrIdx].brightness; }
     byte getSpeed() { return effects[arrIdx].speed; }
     byte getScale() { return effects[arrIdx].scale; }

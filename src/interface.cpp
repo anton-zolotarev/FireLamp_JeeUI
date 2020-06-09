@@ -896,8 +896,11 @@ void update(){ // функция выполняется после ввода д
             myLamp.setLampBrightness(jee.param(F("bright")).toInt());
             if(myLamp.isLampOn()) // только если включена, поскольку этот вызов при перезагрузке зажжет лампу, даже если она выключена в конфиге
                 myLamp.setBrightness(myLamp.getNormalizedLampBrightness(), myLamp.getFaderFlag());    // два вызова выглядят коряво, но встраивать setBrightness в setLampBrightness нельзя, т.к. это корежит фэйдер и отложенную смену эфектов, можно попробовать наоборот сделать setBrightness будет менять яркость в конфиге эффекта
-            curEff->speed = jee.param(F("speed")).toInt();
-            curEff->scale = jee.param(F("scale")).toInt();
+            //curEff->speed = jee.param(F("speed")).toInt();
+            //curEff->scale = jee.param(F("scale")).toInt();
+            myLamp.effects.setSpeed(jee.param(F("speed")).toInt());
+            myLamp.effects.setScale(jee.param(F("scale")).toInt());
+
 
             //LOG(printf_P, PSTR("curEff->param=%p\n"),curEff->param);
             // Если руками правили строковый параметр - то обновляем его в эффекте, а дальше синхронизируем (нужно для возможности очистки)
@@ -1028,13 +1031,15 @@ void httpCallback(const char *param, const char *value)
     } else if(!strcmp_P(param,PSTR("speed"))){
         if(atoi(value)>0){
             jee.var(F("speed"), value);
-            curEff->speed = atoi(value);
+            myLamp.effects.setSpeed(atoi(value));
+            //curEff->speed = atoi(value);
             myLamp.setLoading(true); // перерисовать эффект
         }
     } else if(!strcmp_P(param,PSTR("scale"))){
         if(atoi(value)>0){
             jee.var(F("scale"), value);
-            curEff->scale = atoi(value);
+            myLamp.effects.setScale(atoi(value));
+            //curEff->scale = atoi(value);
             myLamp.setLoading(true); // перерисовать эффект
         }    
     } else if(!strcmp_P(param,PSTR("effect"))){

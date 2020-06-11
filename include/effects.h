@@ -105,53 +105,6 @@ EFF_TIME = (98)                               // Часы (служебный, �
  * заглушка для "старых" эффектов
  */
 void stubRoutine(CRGB *, const char *);
-//void sparklesRoutine(CRGB*, const char*);
-//void fireRoutine(CRGB*, const char*);
-// void whiteColorStripeRoutine(CRGB*, const char*);
-// void fire2012WithPalette(CRGB*, const char*);
-// void pulseRoutine(CRGB*, const char*);
-void rainbowDiagonalRoutine(CRGB*, const char*);
-// void colorsRoutine(CRGB*, const char*);
-// void matrixRoutine(CRGB*, const char*);
-// void snowRoutine(CRGB*, const char*);
-//void snowStormStarfallRoutine(CRGB*, const char*);
-//void lightersRoutine(CRGB*, const char*);
-void ballsRoutine(CRGB*, const char*);
-void lightBallsRoutine(CRGB*, const char*);
-void ballRoutine(CRGB*, const char*);
-/*
-void madnessNoiseRoutine(CRGB*, const char*);
-void rainbowNoiseRoutine(CRGB*, const char*);
-void rainbowStripeNoiseRoutine(CRGB*, const char*);
-void zebraNoiseRoutine(CRGB*, const char*);
-void forestNoiseRoutine(CRGB*, const char*);
-void oceanNoiseRoutine(CRGB*, const char*);
-void plasmaNoiseRoutine(CRGB*, const char*);
-void cloudsNoiseRoutine(CRGB*, const char*);
-void lavaNoiseRoutine(CRGB*, const char*);
-*/
-void BBallsRoutine(CRGB*, const char*);
-//void Sinusoid3Routine(CRGB*, const char*);
-//void metaBallsRoutine(CRGB*, const char*);
-//void spiroRoutine(CRGB*, const char*);
-//void rainbowCometRoutine(CRGB*, const char*);
-//void rainbowComet3Routine(CRGB*, const char*);
-//void prismataRoutine(CRGB*, const char*);
-//void flockRoutine(CRGB*, const char*);
-//void swirlRoutine(CRGB*, const char*);
-//void incrementalDriftRoutine(CRGB*, const char*);
-//void incrementalDriftRoutine2(CRGB*, const char*);
-//void twinklesRoutine(CRGB*, const char*);
-//void radarRoutine(CRGB*, const char*);
-//void wavesRoutine(CRGB*, const char*);
-//void fire2012Routine(CRGB*, const char*);
-//void coloredRainRoutine(CRGB*, const char*);
-//void simpleRainRoutine(CRGB*, const char*);
-//void stormyRainRoutine(CRGB*, const char*);
-//void fire2018Routine(CRGB*, const char*);
-//void ringsRoutine(CRGB*, const char*);
-//void cube2dRoutine(CRGB*, const char *);
-//void multipleStreamSmokeRoutine(CRGB*, const char *);
 #ifdef MIC_EFFECTS
 void freqAnalyseRoutine(CRGB*, const char*);
 #endif
@@ -325,9 +278,9 @@ static EFFECT _EFFECTS_ARR[] = {
     {true, true, 127, 127, 127, EFF_SMOKE, T_SMOKE, stubRoutine, ((char *)_R255)},  // очень хреновое приведение типов, но дальше это разрулим :)
     
 
-    {true, true, 127, 127, 127, EFF_TIME, T_TIME, timePrintRoutine, nullptr}
+    {true, true, 127, 127, 127, EFF_TIME, T_TIME, stubRoutine, nullptr}
 #ifdef MIC_EFFECTS
-    ,{true, true, 127, 127, 127, EFF_FREQ, T_FREQ, freqAnalyseRoutine, ((char *)_R255)} // очень хреновое приведение типов, но дальше это разрулим :)
+    ,{true, true, 127, 127, 127, EFF_FREQ, T_FREQ, stubRoutine, ((char *)_R255)} // очень хреновое приведение типов, но дальше это разрулим :)
 #endif
 };
 
@@ -504,12 +457,12 @@ public:
             uint8_t storage[WIDTH][HEIGHT];
         };
 */
-        struct { // time
-            bool timeShiftDir; // направление сдвига
-            float curTimePos; // текущая позиция вывода
-            CRGB hColor[1]; // цвет часов и минут
-            CRGB mColor[1]; // цвет часов и минут
-        };
+        // struct { // time
+        //     bool timeShiftDir; // направление сдвига
+        //     float curTimePos; // текущая позиция вывода
+        //     CRGB hColor[1]; // цвет часов и минут
+        //     CRGB mColor[1]; // цвет часов и минут
+        // };
         struct { // snow
             float snowShift; // сдвиг снега
         };
@@ -656,6 +609,29 @@ public:
   static void MoveFractionalNoise(bool scale, const uint8_t noise3d[][WIDTH][HEIGHT], int8_t amplitude, float shift = 0);
 };
 
+#ifdef MIC_EFFECTS
+class EffectFreq : public EffectCalc {
+private:
+    int8_t peakX[2][WIDTH];
+    bool freqAnalyseRoutine(CRGB *leds, const char *param);
+    void load() override;
+public:
+    bool run(CRGB *ledarr, const char *opt=nullptr) override;
+};
+#endif
+
+class EffectTime : public EffectCalc {
+private:
+    bool timeShiftDir; // направление сдвига
+    float curTimePos; // текущая позиция вывода
+    CRGB hColor[1]; // цвет часов и минут
+    CRGB mColor[1]; // цвет часов и минут
+    bool timePrintRoutine(CRGB *leds, const char *param);
+    void load() override;
+public:
+    bool run(CRGB *ledarr, const char *opt=nullptr) override;
+};
+
 class EffectMetaBalls : public EffectCalc {
 private:
     bool metaBallsRoutine(CRGB *leds, const char *param);
@@ -674,6 +650,15 @@ public:
 
 class EffectBBalls : public EffectCalc {
 private:
+    uint8_t bballsCOLOR[bballsMaxNUM_BALLS] ;                   // прикручено при адаптации для разноцветных мячиков
+    uint8_t bballsX[bballsMaxNUM_BALLS] ;                       // прикручено при адаптации для распределения мячиков по радиусу лампы
+    int   bballsPos[bballsMaxNUM_BALLS] ;                       // The integer position of the dot on the strip (LED index)
+    float bballsHi ;                         // An array of heights
+    float bballsVImpact[bballsMaxNUM_BALLS] ;                   // As time goes on the impact velocity will change, so make an array to store those values
+    float bballsTCycle ;                    // The time since the last time the ball struck the ground
+    float bballsCOR[bballsMaxNUM_BALLS] ;                       // Coefficient of Restitution (bounce damping)
+    long  bballsTLast[bballsMaxNUM_BALLS] ;                     // The clock time of the last ground strike
+    float bballsShift[bballsMaxNUM_BALLS];
     bool bBallsRoutine(CRGB *leds, const char *param);
 
 public:
@@ -709,6 +694,8 @@ public:
 
 class EffectPulse : public EffectCalc {
 private:
+    uint8_t pulse_hue;
+    uint8_t pulse_step;
     bool pulseRoutine(CRGB *leds, const char *param);
 
 public:
@@ -717,6 +704,9 @@ public:
 
 class EffectBall : public EffectCalc {
 private:
+    int16_t ballColor;
+    int8_t vectorB[2U];
+    float coordB[2U];
     bool ballRoutine(CRGB *leds, const char *param);
 
 public:
@@ -725,6 +715,8 @@ public:
 
 class EffectLighterTracers : public EffectCalc {
 private:
+    int8_t vector[BALLS_AMOUNT][2U];
+    float coord[BALLS_AMOUNT][2U];
     bool lighterTracersRoutine(CRGB *leds, const char *param);
 
 public:
@@ -733,6 +725,8 @@ public:
 
 class EffectRainbow : public EffectCalc {
 private:
+    uint8_t hue;
+    bool rainbowHorVertRoutine(bool isVertical);
     bool rainbowDiagonalRoutine(CRGB *leds, const char *param);
 
 public:
@@ -741,6 +735,7 @@ public:
 
 class EffectColors : public EffectCalc {
 private:
+    uint8_t ihue;
     bool colorsRoutine(CRGB *leds, const char *param);
 
 public:
@@ -766,7 +761,7 @@ public:
 class EffectSnow : public EffectCalc {
 private:
     bool snowRoutine(CRGB *leds, const char *param);
-
+    float snowShift; // сдвиг снега
 public:
     bool run(CRGB *ledarr, const char *opt=nullptr) override;
 };

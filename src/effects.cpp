@@ -254,7 +254,7 @@ bool EffectSparcles::sparklesRoutine(CRGB *leds, const char *param)
   speed = constrain(myLamp.effects.getSpeed()*(mmf>0?(1.5*(mmf/255.0)+0.33):1),1,255);
 // #if defined(LAMP_DEBUG) && defined(MIC_EFFECTS)
 // EVERY_N_SECONDS(1){
-//   LOG.printf_P(PSTR("MF: %5.2f MMF: %d MMP: %d GSHMEM.scale %d GSHMEM.speed: %d\n"), myLamp.getMicFreq(), mmf, mmp, GSHMEM.scale, GSHMEM.speed);
+//   LOG.printf_P(PSTR("MF: %5.2f MMF: %d MMP: %d scale %d speed: %d\n"), myLamp.getMicFreq(), mmf, mmp, scale, speed);
 // }
 // #endif
 //#else
@@ -366,7 +366,7 @@ bool EffectEverythingFall::fire2012WithPalette(CRGB*leds, const char *param) {
 
   uint8_t COOLINGNEW = constrain((uint16_t)scale * palleteCnt / HEIGHT + 7, 1, 255) ;
   // Array of temperature readings at each simulation cell
-  // static byte GSHMEM.heat[WIDTH][HEIGHT];
+  // static byte heat[WIDTH][HEIGHT];
 
   myLamp.blur2d(20);
   myLamp.dimAll(254U - scale * (palleteCnt-1));
@@ -374,7 +374,7 @@ bool EffectEverythingFall::fire2012WithPalette(CRGB*leds, const char *param) {
   for (uint8_t x = 0; x < WIDTH; x++) {
     // Step 1.  Cool down every cell a little
     for (unsigned int i = 0; i < HEIGHT; i++) {
-      //GSHMEM.heat[x][i] = qsub8(GSHMEM.heat[x][i], random8(0, ((COOLINGNEW * 10) / HEIGHT) + 2));
+      //heat[x][i] = qsub8(heat[x][i], random8(0, ((COOLINGNEW * 10) / HEIGHT) + 2));
       heat[x][i] = qsub8(heat[x][i], random8(0, COOLINGNEW));
     }
 
@@ -383,15 +383,15 @@ bool EffectEverythingFall::fire2012WithPalette(CRGB*leds, const char *param) {
       heat[x][k] = (heat[x][k - 1] + heat[x][k - 2] + heat[x][k - 2]) / 3;
     }
 
-    // Step 3.  Randomly ignite new 'sparks' of GSHMEM.heat near the bottom
+    // Step 3.  Randomly ignite new 'sparks' of heat near the bottom
     if (random8() < SPARKINGNEW) {
       int y = random8(2);
       heat[x][y] = qadd8(heat[x][y], random8(160, 255));
     }
 
-    // Step 4.  Map from GSHMEM.heat cells to LED colors
+    // Step 4.  Map from heat cells to LED colors
     for (unsigned int j = 0; j < HEIGHT; j++) {
-      // Scale the GSHMEM.heat value from 0-255 down to 0-240
+      // Scale the heat value from 0-255 down to 0-240
       // for best results with color palettes.
       byte colorindex = scale8(heat[x][j], 240);
       myLamp.setLeds(myLamp.getPixelNumber(x, (HEIGHT - 1) - j), ColorFromPalette(*curPalette, colorindex));
@@ -437,8 +437,8 @@ void drawCircle(int16_t x0, int16_t y0, uint16_t radius, const CRGB & color){
   }
 }
 
-// uint8_t GSHMEM.pulse_hue;
-// uint8_t GSHMEM.pulse_step = 0;
+// uint8_t pulse_hue;
+// uint8_t pulse_step = 0;
 bool EffectPulse::pulseRoutine(CRGB *leds, const char *param) {
     // if((millis() - myLamp.getEffDelay() - EFFECTS_RUN_TIMER) < (unsigned)(255-myLamp.effects.getSpeed())){
     //   return;
@@ -447,7 +447,7 @@ bool EffectPulse::pulseRoutine(CRGB *leds, const char *param) {
     // }
 
   if(myLamp.isLoading()){
-	GSHMEM.pulse_step = 0;
+	pulse_step = 0;
   }
   
   CRGBPalette16 palette;
@@ -466,11 +466,11 @@ bool EffectPulse::pulseRoutine(CRGB *leds, const char *param) {
   //static const float fadeRate = 0.8;
 
   myLamp.dimAll(248U); // если эффект устанавливается с другими эффектами от Stefan Petrick, тогда  процедура должна называться dimAll (без двоечки)
-  if (GSHMEM.pulse_step <= currentRadius) {
-    for (uint8_t i = 0; i < GSHMEM.pulse_step; i++ ) {
-      uint8_t _dark = qmul8( 2U, cos8 (128U / (GSHMEM.pulse_step + 1U) * (i + 1U))) ;
+  if (pulse_step <= currentRadius) {
+    for (uint8_t i = 0; i < pulse_step; i++ ) {
+      uint8_t _dark = qmul8( 2U, cos8 (128U / (pulse_step + 1U) * (i + 1U))) ;
       if (_scale == 1) {            // 1 - случайные диски
-        _pulse_hue = GSHMEM.pulse_hue;
+        _pulse_hue = pulse_hue;
         _pulse_color = CHSV(_pulse_hue, 255U, _dark);
       
       } else if (_scale <= 17) {    // 2...17 - перелив цвета дисков 
@@ -486,23 +486,23 @@ bool EffectPulse::pulseRoutine(CRGB *leds, const char *param) {
         _pulse_color = CHSV(_pulse_hue, 255U, _dark);
       
       } else if (_scale <= 67) {    // 51...67 - пузыри цветы
-        uint8_t _sat =  qsub8( 255U, cos8 (128U / (GSHMEM.pulse_step + 1U) * (i + 1U))) ;
+        uint8_t _sat =  qsub8( 255U, cos8 (128U / (pulse_step + 1U) * (i + 1U))) ;
          _pulse_hue += (68U - _scale) * 7U ;
         _pulse_color = CHSV(_pulse_hue, _sat, _dark);
       
       } else if (_scale < 83) {     // 68...83 - выбор цвета пузырей
-        uint8_t _sat =  qsub8( 255U, cos8 (128U / (GSHMEM.pulse_step + 1U) * (i + 1U))) ;
+        uint8_t _sat =  qsub8( 255U, cos8 (128U / (pulse_step + 1U) * (i + 1U))) ;
         _pulse_hue = (_scale - 68U) * 16U ;
         _pulse_color = CHSV(_pulse_hue, _sat, _dark);
       
       } else if (_scale < 100) {    // 84...99 - перелив цвета пузырей
-        uint8_t _sat =  qsub8( 255U, cos8 (128U / (GSHMEM.pulse_step + 1U) * (i + 1U))) ;
+        uint8_t _sat =  qsub8( 255U, cos8 (128U / (pulse_step + 1U) * (i + 1U))) ;
         _pulse_delta = (_scale - 85U)  ;
         _pulse_color = CHSV(_pulse_hueall, _sat, _dark);
       
       } else { // 100 - случайные пузыри
-        uint8_t _sat =  qsub8( 255U, cos8 (128U / (GSHMEM.pulse_step + 1U) * (i + 1U))) ;
-        _pulse_hue = GSHMEM.pulse_hue;
+        uint8_t _sat =  qsub8( 255U, cos8 (128U / (pulse_step + 1U) * (i + 1U))) ;
+        _pulse_hue = pulse_hue;
         _pulse_color = CHSV(_pulse_hue, _sat, _dark);
       }
       drawCircle(centerX, centerY, i, _pulse_color  );
@@ -511,32 +511,33 @@ bool EffectPulse::pulseRoutine(CRGB *leds, const char *param) {
     centerX = random8(WIDTH - 5U) + 3U;
     centerY = random8(HEIGHT - 5U) + 3U;
     _pulse_hueall += _pulse_delta;
-    GSHMEM.pulse_hue = random8(0U, 255U);
+    pulse_hue = random8(0U, 255U);
     currentRadius = random8(3U, 9U);
-    GSHMEM.pulse_step = 0;
+    pulse_step = 0;
   }
-  GSHMEM.pulse_step++;
+  pulse_step++;
   return true;
 }
 
 // радуги 2D
 // ------------- радуга вертикальная/горизонтальная ----------------
-//uint8_t GSHMEM.hue;
-void rainbowHorVertRoutine(bool isVertical)
+//uint8_t hue;
+bool EffectRainbow::rainbowHorVertRoutine(bool isVertical)
 {
 #ifdef MIC_EFFECTS
-  GSHMEM.hue += (4 * (myLamp.getMicMapMaxPeak()>50?5*(myLamp.getMicMapFreq()/255.0):1));
+  hue += (4 * (myLamp.getMicMapMaxPeak()>50?5*(myLamp.getMicMapFreq()/255.0):1));
 #else
-  GSHMEM.hue += 4;
+  hue += 4;
 #endif
   for (uint8_t i = 0U; i < (isVertical?WIDTH:HEIGHT); i++)
   {
-    CHSV thisColor = CHSV((uint8_t)(GSHMEM.hue + i * myLamp.effects.getScale()%86), 255, 255); // 1/3 без центральной между 1...255, т.е.: 1...84, 170...255
+    CHSV thisColor = CHSV((uint8_t)(hue + i * myLamp.effects.getScale()%86), 255, 255); // 1/3 без центральной между 1...255, т.е.: 1...84, 170...255
     for (uint8_t j = 0U; j < (isVertical?HEIGHT:WIDTH); j++)
     {
       myLamp.drawPixelXY((isVertical?i:j), (isVertical?j:i), thisColor);
     }
   }
+  return true;
 }
 
 // ------------- радуга диагональная -------------
@@ -567,7 +568,7 @@ bool EffectRainbow::rainbowDiagonalRoutine(CRGB *leds, const char *param)
     return true;
   }
 
-  GSHMEM.hue += 4;
+  hue += 4;
   for (uint8_t i = 0U; i < WIDTH; i++)
   {
     for (uint8_t j = 0U; j < HEIGHT; j++)
@@ -576,7 +577,7 @@ bool EffectRainbow::rainbowDiagonalRoutine(CRGB *leds, const char *param)
 #ifdef MIC_EFFECTS
       twirlFactor *= myLamp.getMicMapMaxPeak()>50?1.5*(myLamp.getMicMapFreq()/255.0):1;
 #endif
-      CRGB thisColor = CHSV((uint8_t)(GSHMEM.hue + ((float)WIDTH / (float)HEIGHT * i + j * twirlFactor) * ((float)255 / (float)myLamp.getmaxDim())), 255, 255);
+      CRGB thisColor = CHSV((uint8_t)(hue + ((float)WIDTH / (float)HEIGHT * i + j * twirlFactor) * ((float)255 / (float)myLamp.getmaxDim())), 255, 255);
       myLamp.drawPixelXY(i, j, thisColor);
     }
   }
@@ -596,8 +597,8 @@ bool EffectColors::colorsRoutine(CRGB *leds, const char *param)
   unsigned int delay = (myLamp.effects.getSpeed()==1)?4294967294:255-myLamp.effects.getSpeed()+1; // на скорости 1 будет очень долгое ожидание)))
   
   if (myLamp.isLoading()){ // начальная установка цвета
-    GSHMEM.ihue = myLamp.effects.getScale();
-    myLamp.fillAll(CHSV(GSHMEM.ihue, 255U, 55U)); // еще не наступила смена цвета, поэтому выводим текущий
+    ihue = myLamp.effects.getScale();
+    myLamp.fillAll(CHSV(ihue, 255U, 55U)); // еще не наступила смена цвета, поэтому выводим текущий
   } else {
     step=(step+1)%(delay+1);
     if(step!=delay) {
@@ -605,44 +606,44 @@ bool EffectColors::colorsRoutine(CRGB *leds, const char *param)
 #ifdef MIC_EFFECTS
   uint16_t mmf = myLamp.getMicMapFreq();
   uint16_t mmp = myLamp.getMicMapMaxPeak();
-  GSHMEM.scale = myLamp.effects.getScale();
-  GSHMEM.speed = myLamp.effects.getSpeed();
+  scale = myLamp.effects.getScale();
+  speed = myLamp.effects.getSpeed();
 
 #if defined(LAMP_DEBUG) && defined(MIC_EFFECTS)
 EVERY_N_SECONDS(1){
-  LOG(printf_P,PSTR("MF: %5.2f MMF: %d MMP: %d GSHMEM.scale %d GSHMEM.speed: %d\n"), myLamp.getMicFreq(), mmf, mmp, GSHMEM.scale, GSHMEM.speed);
+  LOG(printf_P,PSTR("MF: %5.2f MMF: %d MMP: %d scale %d speed: %d\n"), myLamp.getMicFreq(), mmf, mmp, scale, speed);
 }
 #endif
       if(myLamp.isMicOnOff()){
         // включен микрофон
-        if(GSHMEM.scale>127){
-          uint8_t pos = (round(3.0*(mmf+(25.0*GSHMEM.speed/255.0))/255.0))*HEIGHT/8; // двигаем частоты по диапазону в зависимости от скорости и делим на 4 части 0...3
+        if(scale>127){
+          uint8_t pos = (round(3.0*(mmf+(25.0*speed/255.0))/255.0))*HEIGHT/8; // двигаем частоты по диапазону в зависимости от скорости и делим на 4 части 0...3
           for(uint8_t y=pos;y<pos+HEIGHT/8;y++){
             for(uint8_t x=0; x<WIDTH; x++){
               //if(mmp>MIN_PEAK_LEVEL/2 || pos==3){ // в половину минимальной амплитуды уже пропускаем :)
-                myLamp.setLeds(myLamp.getPixelNumber(x,y),CHSV(mmf/1.5, 255U, constrain(mmp*(2.0*(GSHMEM.scale>>1)/127.0+0.33),1,255)));
-                myLamp.setLeds(myLamp.getPixelNumber(x,HEIGHT-1-y),CHSV(mmf/1.5, 255U, constrain(mmp*(2.0*(GSHMEM.scale>>1)/127.0+0.33),1,255)));
+                myLamp.setLeds(myLamp.getPixelNumber(x,y),CHSV(mmf/1.5, 255U, constrain(mmp*(2.0*(scale>>1)/127.0+0.33),1,255)));
+                myLamp.setLeds(myLamp.getPixelNumber(x,HEIGHT-1-y),CHSV(mmf/1.5, 255U, constrain(mmp*(2.0*(scale>>1)/127.0+0.33),1,255)));
                 //myLamp.SetLeds(myLamp.getPixelXY(x,y+HIGHT/4-1),CHSV(mmf, 255U, 255));
               //}
             }
           }
           myLamp.dimAll(254); // плавно гасим 
         } else {
-          if(mmp>GSHMEM.scale) // если амплитуда превышает масштаб
-            myLamp.fillAll(CHSV(constrain(mmf*(2.0*GSHMEM.speed/255.0),1,255), 255U, constrain(mmp*(2.0*GSHMEM.scale/127.0+1.5),1,255))); // превышает минимаьный уровень громкости, значит выводим текущую частоту
+          if(mmp>scale) // если амплитуда превышает масштаб
+            myLamp.fillAll(CHSV(constrain(mmf*(2.0*speed/255.0),1,255), 255U, constrain(mmp*(2.0*scale/127.0+1.5),1,255))); // превышает минимаьный уровень громкости, значит выводим текущую частоту
           else
             myLamp.dimAll(252); // плавно гасим
         }
       } else {
         // выключен микрофон
-        myLamp.fillAll(CHSV(GSHMEM.ihue, 255U, 255U)); // еще не наступила смена цвета, поэтому выводим текущий
+        myLamp.fillAll(CHSV(ihue, 255U, 255U)); // еще не наступила смена цвета, поэтому выводим текущий
       }
 #else
-      myLamp.fillAll(CHSV(GSHMEM.ihue, 255U, 255U)); // еще не наступила смена цвета, поэтому выводим текущий
+      myLamp.fillAll(CHSV(ihue, 255U, 255U)); // еще не наступила смена цвета, поэтому выводим текущий
 #endif  
     }
     else {  
-      GSHMEM.ihue += myLamp.effects.getScale(); // смещаемся на следущий
+      ihue += myLamp.effects.getScale(); // смещаемся на следущий
     }
   }
   return true;
@@ -716,15 +717,15 @@ bool EffectSnow::snowRoutine(CRGB *leds, const char *param)
 {
 
   if(myLamp.isLoading()){
-    GSHMEM.snowShift = 0.0;
+    snowShift = 0.0;
   }
 
-  GSHMEM.snowShift = GSHMEM.snowShift + myLamp.effects.getSpeed()/255.0;
+  snowShift = snowShift + myLamp.effects.getSpeed()/255.0;
 
-  if(SNOW_SCALE*GSHMEM.snowShift>1.0){ // будет смещение
+  if(SNOW_SCALE*snowShift>1.0){ // будет смещение
 
   EVERY_N_SECONDS(1){
-    LOG(printf_P, PSTR("%5.2f : %5.2f\n"),GSHMEM.snowShift, SNOW_SCALE*GSHMEM.snowShift );
+    LOG(printf_P, PSTR("%5.2f : %5.2f\n"),snowShift, SNOW_SCALE*snowShift );
   }
 
     // сдвигаем всё вниз
@@ -732,11 +733,11 @@ bool EffectSnow::snowRoutine(CRGB *leds, const char *param)
     {
       for (uint8_t y = 0U; y < HEIGHT - 1; y++)
       {
-        myLamp.drawPixelXY(x, y, myLamp.getPixColorXY(x, y + SNOW_SCALE*GSHMEM.snowShift));
+        myLamp.drawPixelXY(x, y, myLamp.getPixColorXY(x, y + SNOW_SCALE*snowShift));
       }
     }
 
-    for (uint8_t x = 0U; x < WIDTH && SNOW_SCALE*GSHMEM.snowShift>1.0; x++)
+    for (uint8_t x = 0U; x < WIDTH && SNOW_SCALE*snowShift>1.0; x++)
     {
       // заполняем случайно верхнюю строку
       // а также не даём двум блокам по вертикали вместе быть
@@ -747,7 +748,7 @@ bool EffectSnow::snowRoutine(CRGB *leds, const char *param)
     }
   }
   // т.к. не храним позицию, то смещаем все синхронно, но в идеале - хранить позиции
-  GSHMEM.snowShift = (SNOW_SCALE*GSHMEM.snowShift > 1.0 ? (SNOW_SCALE*GSHMEM.snowShift - (int)(GSHMEM.snowShift*SNOW_SCALE)) : (GSHMEM.snowShift));
+  snowShift = (SNOW_SCALE*snowShift > 1.0 ? (SNOW_SCALE*snowShift - (int)(snowShift*SNOW_SCALE)) : (snowShift));
   return true;
 }
 
@@ -845,7 +846,7 @@ bool EffectLighters::lightersRoutine(CRGB *leds, const char *param)
   {
     // EVERY_N_SECONDS(1)
     // {
-    //   LOG.printf_P("S0:%d S1:%d P0:%3.2f P1:%3.2f, scale:%3.2f\n", GSHMEM.lightersSpeed[0U][i], GSHMEM.lightersSpeed[1U][i],GSHMEM.lightersPos[0U][i],GSHMEM.lightersPos[1U][i],speedfactor);
+    //   LOG.printf_P("S0:%d S1:%d P0:%3.2f P1:%3.2f, scale:%3.2f\n", lightersSpeed[0U][i], lightersSpeed[1U][i],lightersPos[0U][i],lightersPos[1U][i],speedfactor);
     // }
 
     EVERY_N_MILLIS(1000)
@@ -891,8 +892,8 @@ bool EffectLighterTracers::run(CRGB *ledarr, const char *opt){
 #define TRACK_STEP            (70U)                         // длина хвоста шарика (чем больше цифра, тем хвост короче)
 bool EffectLighterTracers::lighterTracersRoutine(CRGB *leds, const char *param)
 {
-  // static int16_t GSHMEM.coord[BALLS_AMOUNT][2U];
-  // static int8_t GSHMEM.vector[BALLS_AMOUNT][2U];
+  // static int16_t coord[BALLS_AMOUNT][2U];
+  // static int8_t vector[BALLS_AMOUNT][2U];
   int16_t ballColors[BALLS_AMOUNT];
 
   if (myLamp.isLoading())
@@ -901,12 +902,12 @@ bool EffectLighterTracers::lighterTracersRoutine(CRGB *leds, const char *param)
     {
       int8_t sign;
       // забиваем случайными данными
-      GSHMEM.coord[j][0U] = WIDTH / 2;
+      coord[j][0U] = WIDTH / 2;
       random(0, 2) ? sign = 1 : sign = -1;
-      GSHMEM.vector[j][0U] = random(4, 15) * sign;
-      GSHMEM.coord[j][1U] = HEIGHT / 2;
+      vector[j][0U] = random(4, 15) * sign;
+      coord[j][1U] = HEIGHT / 2;
       random(0, 2) ? sign = 1 : sign = -1;
-      GSHMEM.vector[j][1U] = random(4, 15) * sign;
+      vector[j][1U] = random(4, 15) * sign;
       //ballColors[j] = random(0, 9) * 28;
     }
   }
@@ -939,25 +940,25 @@ bool EffectLighterTracers::lighterTracersRoutine(CRGB *leds, const char *param)
     // движение шариков
     for (uint8_t i = 0U; i < 2U; i++)
     {
-      GSHMEM.coord[j][i] += GSHMEM.vector[j][i]*speedfactor;
-      if (GSHMEM.coord[j][i] < 0)
+      coord[j][i] += vector[j][i]*speedfactor;
+      if (coord[j][i] < 0)
       {
-        GSHMEM.coord[j][i] = 0;
-        GSHMEM.vector[j][i] = -GSHMEM.vector[j][i];
+        coord[j][i] = 0;
+        vector[j][i] = -vector[j][i];
       }
     }
 
-    if (GSHMEM.coord[j][0U] > (int16_t)((WIDTH - 1)))
+    if (coord[j][0U] > (int16_t)((WIDTH - 1)))
     {
-      GSHMEM.coord[j][0U] = (WIDTH - 1);
-      GSHMEM.vector[j][0U] = -GSHMEM.vector[j][0U];
+      coord[j][0U] = (WIDTH - 1);
+      vector[j][0U] = -vector[j][0U];
     }
-    if (GSHMEM.coord[j][1U] > (int16_t)((HEIGHT - 1)))
+    if (coord[j][1U] > (int16_t)((HEIGHT - 1)))
     {
-      GSHMEM.coord[j][1U] = (HEIGHT - 1);
-      GSHMEM.vector[j][1U] = -GSHMEM.vector[j][1U];
+      coord[j][1U] = (HEIGHT - 1);
+      vector[j][1U] = -vector[j][1U];
     }
-    myLamp.setLeds(myLamp.getPixelNumber(GSHMEM.coord[j][0U], GSHMEM.coord[j][1U]), CHSV(ballColors[j], 255U, 255U));
+    myLamp.setLeds(myLamp.getPixelNumber(coord[j][0U], coord[j][1U]), CHSV(ballColors[j], 255U, 255U));
   }
   return true;
 }
@@ -1005,9 +1006,9 @@ bool EffectBall::run(CRGB *ledarr, const char *opt){
 #define RANDOM_COLOR          (1U)                          // случайный цвет при отскоке
 bool EffectBall::ballRoutine(CRGB *leds, const char *param)
 {
-  // static float GSHMEM.coordB[2U];
-  // static int8_t GSHMEM.vectorB[2U];
-  // static int16_t GSHMEM.ballColor;
+  // static float coordB[2U];
+  // static int8_t vectorB[2U];
+  // static int16_t ballColor;
   int8_t ballSize;
 
   ballSize = map(myLamp.effects.getScale(), 0U, 255U, 2U, max((uint8_t)min(WIDTH,HEIGHT) / 3, 2));
@@ -1018,9 +1019,9 @@ bool EffectBall::ballRoutine(CRGB *leds, const char *param)
     myLamp.setEffDelay(millis());
     for (uint8_t i = 0U; i < 2U; i++)
     {
-      GSHMEM.coordB[i] = i? (WIDTH - ballSize) / 2 : (HEIGHT - ballSize) / 2;
-      GSHMEM.vectorB[i] = random(8, 24) - 12;
-      GSHMEM.ballColor = random(1, 255) * myLamp.effects.getScale();
+      coordB[i] = i? (WIDTH - ballSize) / 2 : (HEIGHT - ballSize) / 2;
+      vectorB[i] = random(8, 24) - 12;
+      ballColor = random(1, 255) * myLamp.effects.getScale();
     }
   }
 
@@ -1028,38 +1029,38 @@ bool EffectBall::ballRoutine(CRGB *leds, const char *param)
     myLamp.setEffDelay(millis());
     for (uint8_t i = 0U; i < 2U; i++)
     {
-      if(abs(GSHMEM.vectorB[i])<12)
-        GSHMEM.vectorB[i] += (random(0, 8) - 4);
-      else if (GSHMEM.vectorB[i]>12)
-        GSHMEM.vectorB[i] -= random(1, 6);
+      if(abs(vectorB[i])<12)
+        vectorB[i] += (random(0, 8) - 4);
+      else if (vectorB[i]>12)
+        vectorB[i] -= random(1, 6);
       else
-        GSHMEM.vectorB[i] += random(1, 6);
-      if(!GSHMEM.vectorB[i]) GSHMEM.vectorB[i]++;
-      GSHMEM.ballColor = random(1, 255) * myLamp.effects.getScale();
+        vectorB[i] += random(1, 6);
+      if(!vectorB[i]) vectorB[i]++;
+      ballColor = random(1, 255) * myLamp.effects.getScale();
     }
   }
 
   for (uint8_t i = 0U; i < 2U; i++)
   {
-    GSHMEM.coordB[i] += GSHMEM.vectorB[i]*((0.1*myLamp.effects.getSpeed())/255.0);
-    if ((int8_t)GSHMEM.coordB[i] < 0)
+    coordB[i] += vectorB[i]*((0.1*myLamp.effects.getSpeed())/255.0);
+    if ((int8_t)coordB[i] < 0)
     {
-      GSHMEM.coordB[i] = 0;
-      GSHMEM.vectorB[i] = -GSHMEM.vectorB[i];
-      if (RANDOM_COLOR) GSHMEM.ballColor = random(1, 255) * myLamp.effects.getScale();
+      coordB[i] = 0;
+      vectorB[i] = -vectorB[i];
+      if (RANDOM_COLOR) ballColor = random(1, 255) * myLamp.effects.getScale();
     }
   }
-  if ((int8_t)GSHMEM.coordB[0U] > (int16_t)(WIDTH - ballSize))
+  if ((int8_t)coordB[0U] > (int16_t)(WIDTH - ballSize))
   {
-    GSHMEM.coordB[0U] = (WIDTH - ballSize);
-    GSHMEM.vectorB[0U] = -GSHMEM.vectorB[0U];
-    if (RANDOM_COLOR) GSHMEM.ballColor = random(1, 255) * myLamp.effects.getScale();
+    coordB[0U] = (WIDTH - ballSize);
+    vectorB[0U] = -vectorB[0U];
+    if (RANDOM_COLOR) ballColor = random(1, 255) * myLamp.effects.getScale();
   }
-  if ((int8_t)GSHMEM.coordB[1U] > (int16_t)(HEIGHT - ballSize))
+  if ((int8_t)coordB[1U] > (int16_t)(HEIGHT - ballSize))
   {
-    GSHMEM.coordB[1U] = (HEIGHT - ballSize);
-    GSHMEM.vectorB[1U] = -GSHMEM.vectorB[1U];
-    if (RANDOM_COLOR) GSHMEM.ballColor = random(1, 255) * myLamp.effects.getScale();
+    coordB[1U] = (HEIGHT - ballSize);
+    vectorB[1U] = -vectorB[1U];
+    if (RANDOM_COLOR) ballColor = random(1, 255) * myLamp.effects.getScale();
   }
 
   //FastLED.clear();
@@ -1068,26 +1069,26 @@ bool EffectBall::ballRoutine(CRGB *leds, const char *param)
   {
     for (uint8_t j = 0U; j < ballSize; j++)
     {
-      myLamp.setLeds(myLamp.getPixelNumber((int8_t)GSHMEM.coordB[0U] + i, (int8_t)GSHMEM.coordB[1U] + j), CHSV(GSHMEM.ballColor, 255U, 255U));
+      myLamp.setLeds(myLamp.getPixelNumber((int8_t)coordB[0U] + i, (int8_t)coordB[1U] + j), CHSV(ballColor, 255U, 255U));
     }
   }
   return true;
 }
 
 //-- 3D Noise эффектцы --------------
-// uint16_t GSHMEM.speed = 20;                                        // speed is set dynamically once we've started up
-// uint16_t GSHMEM.scale = 30;                                        // scale is set dynamically once we've started up
-// uint8_t GSHMEM.ihue = 0;
-// static uint16_t GSHMEM.x;
-// static uint16_t GSHMEM.y;
-// static uint16_t GSHMEM.z;
+// uint16_t speed = 20;                                        // speed is set dynamically once we've started up
+// uint16_t scale = 30;                                        // scale is set dynamically once we've started up
+// uint8_t ihue = 0;
+// static uint16_t x;
+// static uint16_t y;
+// static uint16_t z;
 // #if (WIDTH > HEIGHT)
-// uint8_t GSHMEM.noise[WIDTH][WIDTH];
+// uint8_t noise[WIDTH][WIDTH];
 // #else
-// uint8_t GSHMEM.noise[HEIGHT][HEIGHT];
+// uint8_t noise[HEIGHT][HEIGHT];
 // #endif
-// CRGBPalette16 GSHMEM.currentPalette(PartyColors_p);
-// uint8_t GSHMEM.colorLoop = 1;
+// CRGBPalette16 currentPalette(PartyColors_p);
+// uint8_t colorLoop = 1;
 
 // ************* СЛУЖЕБНЫЕ *************
 
@@ -1248,7 +1249,7 @@ bool Effect3DNoise::run(CRGB *ledarr, const char *opt){
       for (uint8_t j = 0; j < HEIGHT; j++)
       {
         CRGB thisColor = CHSV(noise[j][i], 255, noise[i][j]);
-        myLamp.drawPixelXY(i, j, thisColor);                         //leds[getPixelNumber(i, j)] = CHSV(GSHMEM.noise[j][i], 255, GSHMEM.noise[i][j]);
+        myLamp.drawPixelXY(i, j, thisColor);                         //leds[getPixelNumber(i, j)] = CHSV(noise[j][i], 255, noise[i][j]);
       }
     }
     ihue += 1;
@@ -1285,53 +1286,53 @@ bool EffectBBalls::bBallsRoutine(CRGB *leds, const char *param)
     FastLED.clear();
     randomSeed((unsigned)time(NULL) );
     for (int i = 0 ; i < bballsNUM_BALLS ; i++) {          // Initialize variables
-      GSHMEM.bballsCOLOR[i] = random8();
-      GSHMEM.bballsX[i] = random8(1U, WIDTH);
-      GSHMEM.bballsTLast[i] = millis();
-      GSHMEM.bballsPos[i] = 0;                                    // Balls start on the ground
-      GSHMEM.bballsVImpact[i] = bballsVImpact0;                   // And "pop" up at vImpact0
-      GSHMEM.bballsCOR[i] = 0.90 - float(i) / pow(bballsNUM_BALLS, 2);
-      GSHMEM.bballsShift[i] = false;
+      bballsCOLOR[i] = random8();
+      bballsX[i] = random8(1U, WIDTH);
+      bballsTLast[i] = millis();
+      bballsPos[i] = 0;                                    // Balls start on the ground
+      bballsVImpact[i] = bballsVImpact0;                   // And "pop" up at vImpact0
+      bballsCOR[i] = 0.90 - float(i) / pow(bballsNUM_BALLS, 2);
+      bballsShift[i] = false;
     }
   }
   
-  GSHMEM.bballsTCycle = 0;
-  GSHMEM.bballsHi = 0.0;
+  bballsTCycle = 0;
+  bballsHi = 0.0;
   myLamp.dimAll(50);
   for (int i = 0 ; i < bballsNUM_BALLS ; i++) {
-    //myLamp.setLeds(myLamp.getPixelNumber(GSHMEM.bballsX[i], GSHMEM.bballsPos[i]), CRGB::Black); // off for the next loop around
+    //myLamp.setLeds(myLamp.getPixelNumber(bballsX[i], bballsPos[i]), CRGB::Black); // off for the next loop around
 
-    GSHMEM.bballsTCycle =  millis() - GSHMEM.bballsTLast[i] ;     // Calculate the time since the last time the ball was on the ground
+    bballsTCycle =  millis() - bballsTLast[i] ;     // Calculate the time since the last time the ball was on the ground
 
     // A little kinematics equation calculates positon as a function of time, acceleration (gravity) and intial velocity
-    GSHMEM.bballsHi = 0.5 * bballsGRAVITY * pow( GSHMEM.bballsTCycle/(1150 - speed_t * 3) , 2.0 ) + GSHMEM.bballsVImpact[i] * GSHMEM.bballsTCycle/(1150 - speed_t * 3);
+    bballsHi = 0.5 * bballsGRAVITY * pow( bballsTCycle/(1150 - speed_t * 3) , 2.0 ) + bballsVImpact[i] * bballsTCycle/(1150 - speed_t * 3);
 
-    if ( GSHMEM.bballsHi < 0 ) {  
-      GSHMEM.bballsTLast[i] = millis();                    
-      GSHMEM.bballsHi = 0;                            // If the ball crossed the threshold of the "ground," put it back on the ground
-      GSHMEM.bballsVImpact[i] = GSHMEM.bballsCOR[i] * GSHMEM.bballsVImpact[i] ;   // and recalculate its new upward velocity as it's old velocity * COR
+    if ( bballsHi < 0 ) {  
+      bballsTLast[i] = millis();                    
+      bballsHi = 0;                            // If the ball crossed the threshold of the "ground," put it back on the ground
+      bballsVImpact[i] = bballsCOR[i] * bballsVImpact[i] ;   // and recalculate its new upward velocity as it's old velocity * COR
 
 
-      //if ( GSHMEM.bballsVImpact[i] < 0.01 ) GSHMEM.bballsVImpact[i] = bballsVImpact0;  // If the ball is barely moving, "pop" it back up at vImpact0
-      if ( GSHMEM.bballsVImpact[i] < 0.1 ) // сделал, чтобы мячики меняли свою прыгучесть и положение каждый цикл
+      //if ( bballsVImpact[i] < 0.01 ) bballsVImpact[i] = bballsVImpact0;  // If the ball is barely moving, "pop" it back up at vImpact0
+      if ( bballsVImpact[i] < 0.1 ) // сделал, чтобы мячики меняли свою прыгучесть и положение каждый цикл
       {
-        GSHMEM.bballsCOR[i] = 0.90 - float(random(0U, 9U)) / pow(random(4U, 9U), 2); // сделал, чтобы мячики меняли свою прыгучесть каждый цикл
-        GSHMEM.bballsShift[i] = GSHMEM.bballsCOR[i] >= 0.89;                             // если мячик максимальной прыгучести, то разрешаем ему сдвинуться
-        GSHMEM.bballsVImpact[i] = bballsVImpact0;
+        bballsCOR[i] = 0.90 - float(random(0U, 9U)) / pow(random(4U, 9U), 2); // сделал, чтобы мячики меняли свою прыгучесть каждый цикл
+        bballsShift[i] = bballsCOR[i] >= 0.89;                             // если мячик максимальной прыгучести, то разрешаем ему сдвинуться
+        bballsVImpact[i] = bballsVImpact0;
       } 
     }
-    GSHMEM.bballsPos[i] = round( GSHMEM.bballsHi * (HEIGHT - 1) / bballsH0);       // Map "h" to a "pos" integer index position on the LED strip
-    if (GSHMEM.bballsShift[i] && (GSHMEM.bballsPos[i] == HEIGHT - 1)) {                  // если мячик получил право, то пускай сдвинется на максимальной высоте 1 раз
-      GSHMEM.bballsShift[i] = false;
-      if (GSHMEM.bballsCOLOR[i] % 2 == 0) {                                       // чётные налево, нечётные направо
-        if (GSHMEM.bballsX[i] == 0U) GSHMEM.bballsX[i] = WIDTH - 1U;
-        else --GSHMEM.bballsX[i];
+    bballsPos[i] = round( bballsHi * (HEIGHT - 1) / bballsH0);       // Map "h" to a "pos" integer index position on the LED strip
+    if (bballsShift[i] && (bballsPos[i] == HEIGHT - 1)) {                  // если мячик получил право, то пускай сдвинется на максимальной высоте 1 раз
+      bballsShift[i] = false;
+      if (bballsCOLOR[i] % 2 == 0) {                                       // чётные налево, нечётные направо
+        if (bballsX[i] == 0U) bballsX[i] = WIDTH - 1U;
+        else --bballsX[i];
       } else {
-        if (GSHMEM.bballsX[i] == WIDTH - 1U) GSHMEM.bballsX[i] = 0U;
-        else ++GSHMEM.bballsX[i];
+        if (bballsX[i] == WIDTH - 1U) bballsX[i] = 0U;
+        else ++bballsX[i];
       }
     }
-    myLamp.setLeds(myLamp.getPixelNumber(GSHMEM.bballsX[i], GSHMEM.bballsPos[i]), CHSV(GSHMEM.bballsCOLOR[i], 255, 255));
+    myLamp.setLeds(myLamp.getPixelNumber(bballsX[i], bballsPos[i]), CHSV(bballsCOLOR[i], 255, 255));
   }
   return true;
 }
@@ -1706,10 +1707,10 @@ bool EffectPrismata::prismataRoutine(CRGB *leds, const char *param)
 
 // ============= ЭФФЕКТ СТАЯ ===============
 // Адаптация от (c) SottNick
-// Boid GSHMEM.boids[AVAILABLE_BOID_COUNT]; 
-// Boid GSHMEM.predator;
-// PVector GSHMEM.wind;
-// bool GSHMEM.predatorPresent = true;
+// Boid boids[AVAILABLE_BOID_COUNT]; 
+// Boid predator;
+// PVector wind;
+// bool predatorPresent = true;
 void EffectFlock::load(){
   palettesload();    // подгружаем дефолтные палитры
   scalerefresh();    // выбираем палитру согласно "шкале"
@@ -1943,38 +1944,28 @@ bool EffectDrift::incrementalDriftRoutine2(CRGB *leds, const char *param)
 
 // Частотный (спектральный) анализатор
 #ifdef MIC_EFFECTS
-void freqAnalyseRoutine(CRGB *leds, const char *param)
+void EffectFreq::load()
 {
-  if((millis() - myLamp.getEffDelay() - EFFECTS_RUN_TIMER) < (unsigned)(255-myLamp.effects.getSpeed())){
-    return;
-  } else {
-    myLamp.setEffDelay(millis());
-  }
+  palettesload();    // подгружаем дефолтные палитры
+  scalerefresh();    // выбираем палитру согласно "шкале"
+  memset(peakX,0,sizeof(peakX));
+}
 
+bool EffectFreq::run(CRGB *ledarr, const char *opt){
+  /**
+   * дергаем костыль раз в секунду для обвления палитры/шкалы
+   */
+  EVERY_N_SECONDS(1){
+    scalerefresh();
+  }
+  if (dryrun())
+    return false;
   myLamp.setMicAnalyseDivider(0); // отключить авто-работу микрофона, т.к. тут все анализируется отдельно, т.е. не нужно выполнять одну и ту же работу дважды
+  return freqAnalyseRoutine(*&ledarr, &*opt);
+}
 
-  const TProgmemRGBPalette16 *palette_arr[] = {&PartyColors_p, &OceanColors_p, &LavaColors_p, &HeatColors_p, &WaterfallColors_p, &CloudColors_p, &ForestColors_p, &RainbowColors_p, &RainbowStripeColors_p};
-  TProgmemRGBPalette16 const *curPalette;
-  uint8_t palleteCnt = sizeof(palette_arr)/sizeof(TProgmemRGBPalette16 *); // кол-во палитр
-  float ptPallete; // сколько пунктов приходится на одну палитру; 255.1 - диапазон ползунка, не включая 255, т.к. растягиваем только нужное :)
-  uint8_t pos; // позиция в массиве указателей паллитр
-  uint8_t curVal; // curVal == либо var как есть, либо getScale
-  String var = myLamp.effects.getCurrent()->getValue(myLamp.effects.getCurrent()->param, F("R"));
-  if(!var.isEmpty()){
-    ptPallete = 255.1/palleteCnt; // сколько пунктов приходится на одну палитру; 255.1 - диапазон ползунка, не включая 255, т.к. растягиваем только нужное :)
-    pos = (uint8_t)(var.toFloat()/ptPallete); // для 9 палитр будет 255.1/9==28.34, как следствие ползунок/28.34, при 1...28 будет давать 0, 227...255 -> 8
-    curVal = var.toInt();
-  } else {
-    ptPallete = 127.1/palleteCnt; // сколько пунктов приходится на одну палитру; 255.1 - диапазон ползунка, не включая 255, т.к. растягиваем только нужное :)
-    pos = (uint8_t)((float)(myLamp.effects.getScale()%128)/ptPallete);
-    curVal = myLamp.effects.getScale()%128;
-  }
-  curPalette = palette_arr[pos]; // выбираем из доп. регулятора
-
-  if(myLamp.isLoading()){
-    memset(GSHMEM.peakX,0,sizeof(GSHMEM.peakX));
-  }
-  
+bool EffectFreq::freqAnalyseRoutine(CRGB *leds, const char *param)
+{
   float samp_freq;
   double last_freq;
   uint8_t last_min_peak, last_max_peak;
@@ -1999,13 +1990,14 @@ void freqAnalyseRoutine(CRGB *leds, const char *param)
 //   LOG(printf_P,PSTR("F: %8.2f SC: %5.2f\n"),x[WIDTH/freqDiv], scale); 
 // }
 // #endif
+  int curVal, ptPallete, pos; // TODO: убрать, временная загрушка
 
   for(uint8_t xpos=0; xpos<WIDTH/freqDiv; xpos++){
     for(uint8_t ypos=0; ypos<HEIGHT; ypos++){
       uint32_t color = (x[xpos]*scale*(1.0/(ypos+1)))>5?255:0;
-      if(color==255 && GSHMEM.peakX[1][xpos] < ypos){
-        GSHMEM.peakX[1][xpos]=ypos;
-        GSHMEM.peakX[0][xpos]=10;
+      if(color==255 && peakX[1][xpos] < ypos){
+        peakX[1][xpos]=ypos;
+        peakX[0][xpos]=10;
       }
       if(ypos>(1.5*HEIGHT/2.0)){
         color=color<<16;
@@ -2036,10 +2028,10 @@ void freqAnalyseRoutine(CRGB *leds, const char *param)
   for (size_t i = 0; i < WIDTH/freqDiv; i++)
   {
     uint32_t color = 255;
-    int8_t &ypos=GSHMEM.peakX[1][i];
-    if(GSHMEM.peakX[0][i])
-      GSHMEM.peakX[0][i]--;
-    if(isfall && ypos>0 && !GSHMEM.peakX[0][i]) ypos--;
+    int8_t &ypos=peakX[1][i];
+    if(peakX[0][i])
+      peakX[0][i]--;
+    if(isfall && ypos>0 && !peakX[0][i]) ypos--;
 
     if(ypos>(1.5*HEIGHT/2.0)){
       color=color<<16;
@@ -2063,6 +2055,7 @@ void freqAnalyseRoutine(CRGB *leds, const char *param)
 
   samp_freq = samp_freq; last_min_peak=last_min_peak; last_freq=last_freq; // давим варнинги
   delete mw;
+  return true;
 }
 #endif
 
@@ -2399,9 +2392,9 @@ bool EffectRain::run(CRGB *ledarr, const char *opt){
 
 void EffectRain::rain(byte backgroundDepth, byte maxBrightness, byte spawnFreq, byte tailLength, CRGB rainColor, bool splashes, bool clouds, bool storm, bool fixRC)
 {
-  // static uint16_t GSHMEM.noiseX = random16();
-  // static uint16_t GSHMEM.noiseY = random16();
-  // static uint16_t GSHMEM.noiseZ = random16();
+  // static uint16_t noiseX = random16();
+  // static uint16_t noiseY = random16();
+  // static uint16_t noiseZ = random16();
   // CRGB solidRainColor = CRGB(60, 80, 90);
 
   CRGB lightningColor = CRGB(72, 72, 80);
@@ -2451,7 +2444,7 @@ void EffectRain::rain(byte backgroundDepth, byte maxBrightness, byte spawnFreq, 
         //   myLamp.setLeds(myLamp.getPixelNumber(x, y), color);
         // }
         // else if(fixRC && y==(HEIGHT-1) && color==CRGB::Black)
-        //   myLamp.setLeds(myLamp.getPixelNumber(x, y), ColorFromPalette(rain_p, GSHMEM.noise3d[0][x][y]));
+        //   myLamp.setLeds(myLamp.getPixelNumber(x, y), ColorFromPalette(rain_p, noise3d[0][x][y]));
         // else if(!fixRC)
           myLamp.setLeds(myLamp.getPixelNumber(x, y), ColorFromPalette(rain_p, noise3d[0][x][y]));
       }
@@ -2709,10 +2702,10 @@ bool EffectFire2018::fire2018Routine(CRGB *leds, const char *param)
     for (uint8_t x = 0; x < WIDTH; x++)
     {
       // map the colors based on heatmap
-      //myLamp.setLeds(myLamp.getPixelNumber(x, HEIGHT - 1 - y), CRGB( GSHMEM.fire18heat[myLamp.getPixelNumber(x, y)], 1 , 0));
-      //myLamp.setLeds(myLamp.getPixelNumber(x, HEIGHT - 1 - y), CRGB( GSHMEM.fire18heat[myLamp.getPixelNumber(x, y)], GSHMEM.fire18heat[myLamp.getPixelNumber(x, y)] * 0.153, 0));
-      //myLamp.setLeds(myLamp.getPixelNumber(x, HEIGHT - 1 - y), CHSV(Scale, 255-GSHMEM.fire18heat[myLamp.getPixelNumber(x, y)], constrain(GSHMEM.fire18heat[myLamp.getPixelNumber(x, y)]*10,1,255)));
-      //nblend(myLamp.getUnsafeLedsArray()[myLamp.getPixelNumber(x, HEIGHT - 1 - y)], CRGB( GSHMEM.fire18heat[myLamp.getPixelNumber(x, y)], GSHMEM.fire18heat[myLamp.getPixelNumber(x, y)] * 0.153, 0), 200);
+      //myLamp.setLeds(myLamp.getPixelNumber(x, HEIGHT - 1 - y), CRGB( fire18heat[myLamp.getPixelNumber(x, y)], 1 , 0));
+      //myLamp.setLeds(myLamp.getPixelNumber(x, HEIGHT - 1 - y), CRGB( fire18heat[myLamp.getPixelNumber(x, y)], fire18heat[myLamp.getPixelNumber(x, y)] * 0.153, 0));
+      //myLamp.setLeds(myLamp.getPixelNumber(x, HEIGHT - 1 - y), CHSV(Scale, 255-fire18heat[myLamp.getPixelNumber(x, y)], constrain(fire18heat[myLamp.getPixelNumber(x, y)]*10,1,255)));
+      //nblend(myLamp.getUnsafeLedsArray()[myLamp.getPixelNumber(x, HEIGHT - 1 - y)], CRGB( fire18heat[myLamp.getPixelNumber(x, y)], fire18heat[myLamp.getPixelNumber(x, y)] * 0.153, 0), 200);
       CRGB color = CRGB(fire18heat[myLamp.getPixelNumber(x, y)], (float)fire18heat[myLamp.getPixelNumber(x, y)] * (scale/5.0) * 0.01, 0); color*=2.5;
       myLamp.setLeds(myLamp.getPixelNumber(x, HEIGHT - 1 - y), color);
 
@@ -2728,13 +2721,13 @@ bool EffectFire2018::fire2018Routine(CRGB *leds, const char *param)
 // из-за повторного использоваия переменных от других эффектов теперь в этом коде невозможно что-то понять.
 // поэтому для понимания придётся сперва заменить названия переменных на человеческие. но всё равно это песец, конечно.
 
-//uint8_t GSHMEM.ringColor[HEIGHT]; // начальный оттенок каждого кольца (оттенка из палитры) 0-255
-//uint8_t GSHMEM.huePos[HEIGHT]; // местоположение начального оттенка кольца 0-WIDTH-1
-//uint8_t GSHMEM.shiftHueDir[HEIGHT]; // 4 бита на ringHueShift, 4 на ringHueShift2
+//uint8_t ringColor[HEIGHT]; // начальный оттенок каждого кольца (оттенка из палитры) 0-255
+//uint8_t huePos[HEIGHT]; // местоположение начального оттенка кольца 0-WIDTH-1
+//uint8_t shiftHueDir[HEIGHT]; // 4 бита на ringHueShift, 4 на ringHueShift2
 ////ringHueShift[ringsCount]; // шаг градиета оттенка внутри кольца -8 - +8 случайное число
 ////ringHueShift2[ringsCount]; // обычная скорость переливания оттенка всего кольца -8 - +8 случайное число
-//uint8_t GSHMEM.currentRing; // кольцо, которое в настоящий момент нужно провернуть
-//uint8_t GSHMEM.stepCount; // оставшееся количество шагов, на которое нужно провернуть активное кольцо - случайное от WIDTH/5 до WIDTH-3
+//uint8_t currentRing; // кольцо, которое в настоящий момент нужно провернуть
+//uint8_t stepCount; // оставшееся количество шагов, на которое нужно провернуть активное кольцо - случайное от WIDTH/5 до WIDTH-3
 bool EffectRingsLock::run(CRGB *ledarr, const char *opt){
   if (dryrun())
     return false;
@@ -2763,8 +2756,8 @@ void EffectRingsLock::load(){
     huePos[i] = 0U; //random8(WIDTH); само прокрутится постепенно
     stepCount = 0U;
     //do { // песец конструкцию придумал бредовую
-    //  GSHMEM.stepCount = WIDTH - 3U - random8((WIDTH - 3U) * 2U); само присвоится при первом цикле
-    //} while (GSHMEM.stepCount < WIDTH / 5U || GSHMEM.stepCount > 255U - WIDTH / 5U);
+    //  stepCount = WIDTH - 3U - random8((WIDTH - 3U) * 2U); само присвоится при первом цикле
+    //} while (stepCount < WIDTH / 5U || stepCount > 255U - WIDTH / 5U);
     currentRing = random8(ringNb);
   }
 }
@@ -2779,10 +2772,10 @@ bool EffectRingsLock::ringsRoutine(CRGB *leds, const char *param)
     {
        h = shiftHueDir[i] & 0x0F; // сдвигаем оттенок внутри кольца
        if (h > 8U)
-         //GSHMEM.ringColor[i] += (uint8_t)(7U - h); // с такой скоростью сдвиг оттенка от вращения кольца не отличается
+         //ringColor[i] += (uint8_t)(7U - h); // с такой скоростью сдвиг оттенка от вращения кольца не отличается
          ringColor[i]--;
        else
-         //GSHMEM.ringColor[i] += h;
+         //ringColor[i] += h;
          ringColor[i]++;
     } else {
       if (stepCount == 0) { // если сдвиг активного кольца завершён, выбираем следующее
@@ -2833,13 +2826,13 @@ bool EffectRingsLock::ringsRoutine(CRGB *leds, const char *param)
 
 #define PAUSE_MAX 7
 
-//uint8_t GSHMEM.storage[WIDTH][HEIGHT];
-//uint8_t GSHMEM.pauseSteps; // осталось шагов паузы
-//uint8_t GSHMEM.currentStep; // текущий шаг сдвига (от 0 до GSHMEM.shiftSteps-1)
-//uint8_t GSHMEM.shiftSteps; // всего шагов сдвига (от 3 до 4)
-//uint8_t GSHMEM.gX, GSHMEM.gY; // глобальный X и глобальный Y нашего "кубика"
-// int8_t GSHMEM.globalShiftX, GSHMEM.globalShiftY; // нужно ли сдвинуть всё поле по окончаии цикла и в каком из направлений (-1, 0, +1)
-// bool GSHMEM.direction; // направление вращения в данный момент
+//uint8_t storage[WIDTH][HEIGHT];
+//uint8_t pauseSteps; // осталось шагов паузы
+//uint8_t currentStep; // текущий шаг сдвига (от 0 до shiftSteps-1)
+//uint8_t shiftSteps; // всего шагов сдвига (от 3 до 4)
+//uint8_t gX, gY; // глобальный X и глобальный Y нашего "кубика"
+// int8_t globalShiftX, globalShiftY; // нужно ли сдвинуть всё поле по окончаии цикла и в каком из направлений (-1, 0, +1)
+// bool direction; // направление вращения в данный момент
 
 bool EffectCube2d::run(CRGB *ledarr, const char *opt){
   if (dryrun())
@@ -2857,10 +2850,10 @@ void EffectCube2d::load(){
 
   for (uint8_t j = 0U; j < cntY; j++)
   {
-    y = j * (sizeY + 1U); // + GSHMEM.gY т.к. оно =0U
+    y = j * (sizeY + 1U); // + gY т.к. оно =0U
     for (uint8_t i = 0U; i < cntX; i++)
     {
-      x = i * (sizeX + 1U); // + GSHMEM.gX т.к. оно =0U
+      x = i * (sizeX + 1U); // + gX т.к. оно =0U
       if (myLamp.effects.getScale() == 255U)
         color = CHSV(45U, 0U, 128U + random8(128U));
       else 
@@ -3015,9 +3008,9 @@ bool EffectCube2d::cube2dRoutine(CRGB *leds, const char *param)
       currentStep = 0U;
       pauseSteps = PAUSE_MAX;
       //если часть ячеек двигалась на 1 пиксель, пододвигаем глобальные координаты начала
-      gY = gY + globalShiftY; //+= GSHMEM.globalShiftY;
+      gY = gY + globalShiftY; //+= globalShiftY;
       globalShiftY = 0;
-      //GSHMEM.gX += GSHMEM.globalShiftX; для бесшовной не годится
+      //gX += globalShiftX; для бесшовной не годится
       gX = (WIDTH + gX + globalShiftX) % WIDTH;
       globalShiftX = 0;
 
@@ -3039,9 +3032,9 @@ bool EffectCube2d::cube2dRoutine(CRGB *leds, const char *param)
 
 /*        if (shiftAll == 0) // пытался сделать, чтобы при совпадении "весь кубик стоит" сдвинуть его весь на пиксель, но заколебался
         {
-          GSHMEM.shiftSteps = sizeY;
+          shiftSteps = sizeY;
           shiftAll = (random8(2)) ? 1 : -1;
-          if (GSHMEM.gY - shiftAll < 0 || GSHMEM.gY - shiftAll + fieldY >= (int)HEIGHT)
+          if (gY - shiftAll < 0 || gY - shiftAll + fieldY >= (int)HEIGHT)
             shiftAll = 0 - shiftAll;
         }
 */
@@ -3081,9 +3074,9 @@ bool EffectCube2d::cube2dRoutine(CRGB *leds, const char *param)
        
 /*        if (shiftAll == 0) // пытался сделать, чтобы при совпадении "весь кубик стоит" сдвинуть его весь на пиксель, но заколебался
         {
-          GSHMEM.shiftSteps = sizeX;
+          shiftSteps = sizeX;
           shiftAll = (random8(2)) ? 1 : -1;
-          if (GSHMEM.gX - shiftAll < 0 || GSHMEM.gX - shiftAll + fieldX >= (int)WIDTH)
+          if (gX - shiftAll < 0 || gX - shiftAll + fieldX >= (int)WIDTH)
             shiftAll = 0 - shiftAll;
         }
 */         
@@ -3110,45 +3103,34 @@ bool EffectCube2d::cube2dRoutine(CRGB *leds, const char *param)
 }
 
 //--------------
-void timePrintRoutine(CRGB *leds, const char *param)
-{
-  const TProgmemRGBPalette16 *palette_arr[] = {&PartyColors_p, &OceanColors_p, &LavaColors_p, &HeatColors_p, &WaterfallColors_p, &CloudColors_p, &ForestColors_p, &RainbowColors_p, &RainbowStripeColors_p};
-  TProgmemRGBPalette16 const *curPalette;
-  uint8_t palleteCnt = sizeof(palette_arr)/sizeof(TProgmemRGBPalette16 *); // кол-во палитр
-  float ptPallete; // сколько пунктов приходится на одну палитру; 255.1 - диапазон ползунка, не включая 255, т.к. растягиваем только нужное :)
-  uint8_t pos; // позиция в массиве указателей паллитр
-  uint8_t curVal; // curVal == либо var как есть, либо getScale
-  String var = myLamp.effects.getCurrent()->getValue(myLamp.effects.getCurrent()->param, F("R"));
-  if(!var.isEmpty()){
-    ptPallete = 255.1/palleteCnt; // сколько пунктов приходится на одну палитру; 255.1 - диапазон ползунка, не включая 255, т.к. растягиваем только нужное :)
-    pos = (uint8_t)(var.toFloat()/ptPallete); // для 9 палитр будет 255.1/9==28.34, как следствие ползунок/28.34, при 1...28 будет давать 0, 227...255 -> 8
-    curVal = var.toInt();
-  } else {
-    ptPallete = 255.1/palleteCnt; // сколько пунктов приходится на одну палитру; 255.1 - диапазон ползунка, не включая 255, т.к. растягиваем только нужное :)
-    pos = (uint8_t)((float)myLamp.effects.getScale()/ptPallete);
-    curVal = myLamp.effects.getScale();
-  }
-  curPalette = palette_arr[pos]; // выбираем из доп. регулятора
-  uint8_t scale = curVal-ptPallete*pos; // разбиваю на поддиапазоны внутри диапазона, будет уходить в 0 на крайней позиции поддиапазона, ну и хрен с ним :), хотя нужно помнить!
-
-  if(myLamp.isLoading() && ((GSHMEM.curTimePos<=(signed)LET_WIDTH*2-(LET_WIDTH/2)) || (GSHMEM.curTimePos>=(signed)WIDTH+(LET_WIDTH/2))) )
-  {
-    GSHMEM.curTimePos = random(LET_WIDTH*2,WIDTH);
-    GSHMEM.hColor[0] = ColorFromPalette(*curPalette, random8());
-    GSHMEM.mColor[0] = ColorFromPalette(*curPalette, random8());
-  }
-
-  uint8_t speed = myLamp.effects.getSpeed();
-
+bool EffectTime::run(CRGB *ledarr, const char *opt){
   if((millis() - myLamp.getEffDelay() - EFFECTS_RUN_TIMER) < (unsigned)((255-myLamp.effects.getSpeed())) && (speed==1 || speed==255)){
       myLamp.dimAll(254);
-    return;
+    return true;
   } else {
     myLamp.setEffDelay(millis());
     if (myLamp.isPrintingNow())
-      return;
+      return false;
   }
+  // if (dryrun())
+  //   return false;
+  return timePrintRoutine(*&ledarr, &*opt);
+}
 
+void EffectTime::load(){
+  palettesload();    // подгружаем дефолтные палитры
+  scalerefresh();    // выбираем палитру согласно "шкале"
+
+  if(((curTimePos<=(signed)LET_WIDTH*2-(LET_WIDTH/2)) || (curTimePos>=(signed)WIDTH+(LET_WIDTH/2))) )
+  {
+    curTimePos = random(LET_WIDTH*2,WIDTH);
+    hColor[0] = ColorFromPalette(*curPalette, random8());
+    mColor[0] = ColorFromPalette(*curPalette, random8());
+  }
+}
+
+bool EffectTime::timePrintRoutine(CRGB *leds, const char *param)
+{
   if (speed==1 || speed==255){
     EVERY_N_SECONDS(5){
       FastLED.clear();
@@ -3160,24 +3142,25 @@ void timePrintRoutine(CRGB *leds, const char *param)
   } else {
     //FastLED.clear();
     myLamp.dimAll(250-speed/3); // небольшой шлейф, чисто как визуальный эффект :)
-    int16_t xPos = GSHMEM.curTimePos;
+    int16_t xPos = curTimePos;
     if((xPos<=(signed)LET_WIDTH*2-((signed)LET_WIDTH/2)) || (xPos>=(signed)WIDTH+((signed)LET_WIDTH/2))){
       if(xPos<=(signed)LET_WIDTH*2){
-        GSHMEM.timeShiftDir = false;
+        timeShiftDir = false;
         xPos=LET_WIDTH*2-(LET_WIDTH/2); // будет на полсимвола выходить за пределы, так задумано :)
       } else {
-        GSHMEM.timeShiftDir = true;
+        timeShiftDir = true;
         xPos=WIDTH+(LET_WIDTH/2); // будет на полсимвола выходить за пределы, так задумано :)
       }
-      GSHMEM.hColor[0] = ColorFromPalette(*curPalette, random8());
-      GSHMEM.mColor[0] = ColorFromPalette(*curPalette, random8());
+      hColor[0] = ColorFromPalette(*curPalette, random8());
+      mColor[0] = ColorFromPalette(*curPalette, random8());
     }
     String tmp = myLamp.timeProcessor.getFormattedShortTime();
     uint8_t shift = beatsin8(myLamp.effects.getSpeed()/5, -1, 1);
-    myLamp.sendStringToLamp(tmp.substring(0,2).c_str(), GSHMEM.hColor[0], false, HEIGHT-LET_HEIGHT+shift, xPos);
-    myLamp.sendStringToLamp(tmp.substring(3,5).c_str(), GSHMEM.mColor[0], false, HEIGHT-(LET_HEIGHT*2)+shift, xPos);
-    GSHMEM.curTimePos=GSHMEM.curTimePos+(0.23*(speed/255.0))*(GSHMEM.timeShiftDir?-1:1); // смещаем
+    myLamp.sendStringToLamp(tmp.substring(0,2).c_str(), hColor[0], false, HEIGHT-LET_HEIGHT+shift, xPos);
+    myLamp.sendStringToLamp(tmp.substring(3,5).c_str(), mColor[0], false, HEIGHT-(LET_HEIGHT*2)+shift, xPos);
+    curTimePos=curTimePos+(0.23*(speed/255.0))*(timeShiftDir?-1:1); // смещаем
   }
+  return true;
 }
 
 // ------------------------------ ЭФФЕКТ ДЫМ ----------------------
@@ -3233,7 +3216,7 @@ bool EffectMStreamSmoke::multipleStreamSmokeRoutine(CRGB *leds, const char *para
         rhue = random8();
       }
     color = CHSV(rhue, 255U, 255U);
-    if ((int)xSmokePos & 0x01)//((GSHMEM.smokeDeltaHue >> 2U) == 0U) // какой-то умножитель охота подключить к задержке смены цвета, но хз какой...
+    if ((int)xSmokePos & 0x01)//((smokeDeltaHue >> 2U) == 0U) // какой-то умножитель охота подключить к задержке смены цвета, но хз какой...
       smokeHue++;
   }
   else
@@ -3306,6 +3289,9 @@ bool EffectMStreamSmoke::multipleStreamSmokeRoutine(CRGB *leds, const char *para
 void EffectWorker::workerset(EFF_ENUM effect){
   switch (effect)
   {
+  case EFF_ENUM::EFF_TIME :
+    worker = std::unique_ptr<EffectTime>(new EffectTime());
+    break;
   case EFF_ENUM::EFF_SWIRL :
     worker = std::unique_ptr<EffectSwirl>(new EffectSwirl());
     break;
@@ -3417,6 +3403,12 @@ void EffectWorker::workerset(EFF_ENUM effect){
   case EFF_ENUM::EFF_STORMYRAIN :
     worker = std::unique_ptr<EffectRain>(new EffectRain());
     break;
+#ifdef MIC_EFFECTS
+  case EFF_ENUM::EFF_FREQ :
+    worker = std::unique_ptr<EffectFreq>(new EffectFreq());
+    break;
+#endif
+
   default:
     worker = std::unique_ptr<EffectCalc>(new EffectCalc());
   }

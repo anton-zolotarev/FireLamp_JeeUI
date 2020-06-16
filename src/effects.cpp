@@ -154,7 +154,7 @@ void EffectCalc::palettemap(std::vector<PGMPallete*> &_pals, const uint8_t _val)
  * и обновляет палитру.
  */
 void EffectCalc::scalerefresh(){
-  String var = myLamp.effects.getCurrent()->getValue(myLamp.effects.getCurrent()->param, F("R"));
+  String var = myLamp.effects.getValue(myLamp.effects.getCurrent()->param, F("R"));
   if(!var.isEmpty()){
     rval = var.toInt();
     palettemap(palettes, rval);
@@ -351,7 +351,7 @@ bool EffectEverythingFall::fire2012WithPalette(CRGB*leds, const char *param) {
   float ptPallete; // сколько пунктов приходится на одну палитру; 255.1 - диапазон ползунка, не включая 255, т.к. растягиваем только нужное :)
   uint8_t pos; // позиция в массиве указателей паллитр
   uint8_t curVal; // curVal == либо var как есть, либо getScale
-  String var = myLamp.effects.getCurrent()->getValue(myLamp.effects.getCurrent()->param, F("R"));
+  String var = myLamp.effects.getValue(myLamp.effects.getCurrent()->param, F("R"));
   if(!var.isEmpty()){
     ptPallete = 255.1/palleteCnt; // сколько пунктов приходится на одну палитру; 255.1 - диапазон ползунка, не включая 255, т.к. растягиваем только нужное :)
     pos = (uint8_t)(var.toFloat()/ptPallete); // для 9 палитр будет 255.1/9==28.34, как следствие ползунок/28.34, при 1...28 будет давать 0, 227...255 -> 8
@@ -3158,7 +3158,7 @@ bool EffectMStreamSmoke::multipleStreamSmokeRoutine(CRGB *leds, const char *para
 
   myLamp.dimAll(254);
 
-  String var = myLamp.effects.getCurrent()->getValue(myLamp.effects.getCurrent()->param, F("R"));
+  String var = myLamp.effects.getValue(myLamp.effects.getCurrent()->param, F("R"));
 
   int val;
   if(!var.isEmpty()){

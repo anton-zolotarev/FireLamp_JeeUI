@@ -44,7 +44,7 @@ JeeUI2 lib used under MIT License Copyright (c) 2019 Marsel Akhkamov
 #include <FS.h>
 #include "effects_types.h"
 
-#define DEF_SLIDER 127
+#define DEFAULT_SLIDER 127
 
 typedef enum _EFF_ENUM {
 EFF_NONE = (0U),                              // Специальный служебный эффект, не комментировать и индекс не менять константу!
@@ -124,6 +124,7 @@ typedef struct _EFFECT {
     void (*func)(CRGB*,const char*);
     char *param;
     void setNone(){ eff_nb=EFF_NONE; eff_name=nullptr; brightness=127; speed=127; scale=127; canBeSelected=false; isFavorite=false; func=nullptr; param=nullptr; }
+/*
     String getParam() {
         if(param!=nullptr){
             size_t slen = strlen_P(param);
@@ -134,7 +135,8 @@ typedef struct _EFFECT {
         } else
             return String(); // empty
     }
-
+*/
+/*
     void updateParam(const char *str) {
         if(param!=nullptr && param!=_R255) // херовая проверка, надобно будет потом выяснить как безопасно разпознать указатель на PROGMEM или на RAM
             delete [] param;
@@ -174,6 +176,7 @@ typedef struct _EFFECT {
         //LOG(println, tmp);
         updateParam(tmp.c_str());
     }
+*/
 } EFFECT;
 #pragma pack(pop)
 
@@ -390,8 +393,8 @@ public:
     byte scale;
     uint8_t rval;               /**< загадочная R */
     uint8_t palettescale;       /**< странная переменная шкалы внутри палитры */
-    uint8_t mmf=0;
-    uint8_t mmp=0;
+    //uint8_t mmf=0;            /**< резерв для микрофона */
+    //uint8_t mmp=0;
 
     /** флаг, включает использование палитр в эффекте.
      *  влияет на:
@@ -407,7 +410,7 @@ public:
 
     /**
      * intit метод, вызывается отдельно после создания экземпляра эффекта для установки базовых переменных
-     * в конце выполнения вызывает метод load() который может быть переопределен в очернем классе
+     * в конце выполнения вызывает метод load() который может быть переопределен в дочернем классе
      * @param _eff - энумератор эффекта, может пригодится для мультиэффектов типа 3DNoise если эффект
      * может использовать разные функции для различных версий эффекта
      * @param _brt - яркость, прилетающая из "настроек" эффекта, эффект может менять свою яркость позже независимо от указок "сверху"
@@ -1241,6 +1244,62 @@ public:
     EFFECT *getCurrent(){ // вернуть текущий
         return &(effects[arrIdx]);
     }
+
+
+    // ой как не нравятся мне джейсоны :()
+    String getParam() {
+        if(effects[arrIdx].param!=nullptr){
+            size_t slen = strlen_P(effects[arrIdx].param);
+            char buffer[slen+4]; memset(buffer,0,slen+4);
+            strcpy_P(buffer, effects[arrIdx].param); // Обход Exeption 3, это шаманство из-за корявого использования указателя, он одновременно может быть и на PROGMEM, и на RAM
+            String tmp = buffer;
+            return tmp;
+        } else
+            return String(); // empty
+    }
+
+    void updateParam(const char *str) {
+        if(effects[arrIdx].param!=nullptr && effects[arrIdx].param!=_R255) // херовая проверка, надобно будет потом выяснить как безопасно разпознать указатель на PROGMEM или на RAM
+            delete [] effects[arrIdx].param;
+        effects[arrIdx].param = new char[strlen(str)+1];
+        strcpy(effects[arrIdx].param, str);
+    }
+
+    String getValue(const char *src, const _PTR type){
+        if(src==nullptr)
+            return String(); // empty
+        //LOG(printf_P, PSTR("TEST: %s\n"),src);
+        DynamicJsonDocument doc(128);
+        String tmp(FPSTR(src));
+        tmp.replace(F("'"),F("\"")); // так делать не красиво, но шопаделаешь...
+        deserializeJson(doc,tmp);
+        JsonArray arr = doc.as<JsonArray>();
+        for (size_t i=0; i<arr.size(); i++) {
+            JsonObject item = arr[i];
+            if(item.containsKey(FPSTR(type))){
+                return item[FPSTR(type)].as<String>();
+            }
+        }
+        return String(); // empty
+    }
+    void setValue(const char *src, const _PTR type, const _PTR val){
+        DynamicJsonDocument doc(128);
+        deserializeJson(doc,String(FPSTR(src)));
+        JsonArray arr = doc.as<JsonArray>();
+        for (size_t i=0; i<arr.size(); i++) {
+            JsonObject item = arr[i];
+            if(item.containsKey(FPSTR(type))){
+                item[FPSTR(type)]=FPSTR(val);
+            }
+        }
+        String tmp;
+        serializeJson(doc,tmp);
+        tmp.replace(F("\""),F("'")); // так делать не красиво, но шопаделаешь...
+        //LOG(println, tmp);
+        updateParam(tmp.c_str());
+    }
+
+
 };
 
 typedef enum _PERIODICTIME {

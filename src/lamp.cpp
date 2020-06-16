@@ -360,7 +360,6 @@ if(touch.isHold() || !touch.isHolded())
           //changePower(true);
           setOnOff(true);
           switcheffect(SW_SPECIFIC, getFaderFlag(), effects.getEn());
-          loadingFlag = true;
         }
       } else {        // лампа была включена
         storedEffect = ((effects.getEn() == EFF_WHITE_COLOR) ? storedEffect : effects.getEn()); // сохраняем предыдущий эффект, если только это не белая лампа
@@ -720,7 +719,6 @@ LAMP::LAMP() : docArrMessages(512), tmConfigSaveTime(0), tmNumHoldTimer(NUMHOLD_
       dawnFlag = false; // флаг устанавливается будильником "рассвет"
       ONflag = false; // флаг включения/выключения
       manualOff = false;
-      loadingFlag = true; // флаг для начальной инициализации эффекта
       isFaderON = true; // признак того, что используется фейдер для смены эффектов
       isGlobalBrightness = false; // признак использования глобальной яркости для всех режимов
       isFirstHoldingPress = false; // флаг: только начали удерживать?

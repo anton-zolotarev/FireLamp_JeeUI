@@ -927,8 +927,6 @@ void update(){ // функция выполняется после ввода д
                 curEff->updateParam(tmpParam.c_str());
             }
 */
-            myLamp.setLoading(true); // перерисовать эффект
-
             if(iGLOBAL.prevEffect!=nullptr){
                 if(!myLamp.effects.autoSaveConfig()){ // отложенная запись, не чаще чем однократно в 30 секунд 
                     myLamp.ConfigSaveSetup(60*1000); //через минуту сработает еще попытка записи и так до успеха
@@ -980,7 +978,6 @@ void setEffectParams(EFFECT *curEff)
         jee.var(F("GlobBRI"), String(myLamp.getLampBrightness()));
     else
         myLamp.setGlobalBrightness(jee.param(F("GlobBRI")).toInt());
-    myLamp.setLoading(); // обновить эффект
     iGLOBAL.prevEffect = curEff; // обновить указатель на предыдущий эффект
 
     // if(myLamp.getMode()==LAMPMODE::MODE_DEMO){
@@ -1026,21 +1023,18 @@ void httpCallback(const char *param, const char *value)
             }
             myLamp.setLampBrightness(atoi(value));
             myLamp.fadelight(myLamp.getNormalizedLampBrightness());
-            //myLamp.setLoading(true); // перерисовать эффект
         }
     } else if(!strcmp_P(param,PSTR("speed"))){
         if(atoi(value)>0){
             jee.var(F("speed"), value);
             myLamp.effects.setSpeed(atoi(value));
             //curEff->speed = atoi(value);
-            myLamp.setLoading(true); // перерисовать эффект
         }
     } else if(!strcmp_P(param,PSTR("scale"))){
         if(atoi(value)>0){
             jee.var(F("scale"), value);
             myLamp.effects.setScale(atoi(value));
             //curEff->scale = atoi(value);
-            myLamp.setLoading(true); // перерисовать эффект
         }    
     } else if(!strcmp_P(param,PSTR("effect"))){
         if(atoi(value)>0){

@@ -121,7 +121,6 @@ static const TProgmemRGBPalette16 WoodFireColors_p FL_PROGMEM = {CRGB::Black, CR
 #define NOISE_SCALE_AMP  (58UL)    // амплификатор шкалы
 #define NOISE_SCALE_ADD  (8UL)    // корректор шкалы
 
-#define bballsMaxNUM_BALLS     (16U)                // максимальное количество мячиков прикручено при адаптации для бегунка Масштаб
 #define BALLS_AMOUNT           (7U)                 // максимальное количество "шариков"
 #define LIGHTERS_AM            (64U)                // светлячки
 #define NUM_LAYERS             (1U)                 // The coordinates for 3 16-bit noise spaces.
@@ -132,6 +131,23 @@ static const TProgmemRGBPalette16 WoodFireColors_p FL_PROGMEM = {CRGB::Black, CR
 #define e_com_TAILSPEED             (500)         // скорость смещения хвоста 
 #define e_com_BLUR                  (24U)         // размытие хвоста 
 #define e_com_3DCOLORSPEED          (5U)          // скорость случайного изменения цвета (0й - режим)
+
+
+// ------------- светлячки со шлейфом -------------
+//#define BALLS_AMOUNT          (7U)                          // максимальное количество "шариков"
+#define CLEAR_PATH            (1U)                          // очищать путь
+#define BALL_TRACK            (1U)                          // (0 / 1) - вкл/выкл следы шариков
+#define TRACK_STEP            (70U)                         // длина хвоста шарика (чем больше цифра, тем хвост короче)
+
+// ------------- блуждающий кубик -------------
+#define RANDOM_COLOR          (1U)                          // случайный цвет при отскоке
+
+// --------------------------- эффект мячики ----------------------
+#define bballsMaxNUM_BALLS     (16U)                // максимальное количество мячиков прикручено при адаптации для бегунка Масштаб
+#define bballsGRAVITY          (-10)                // Downward (negative) acceleration of gravity in m/s^2
+#define bballsH0                (2)                 // Starting height, in meters, of the ball (strip length)
+#define bballsVImpact0          (sqrt(-2 * bballsGRAVITY * bballsH0))
+
 
 
 template <class T>

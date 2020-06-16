@@ -287,7 +287,7 @@ static EFFECT _EFFECTS_ARR[] = {
 class SHARED_MEM {
 public:
     union {
-/*
+        /*
 		struct { // spiroRoutine
             boolean spiroincrement;
             boolean spirohandledChange;
@@ -296,7 +296,6 @@ public:
             float spirotheta1;
             float spirotheta2;
 		};
-*/
         struct { // BouncingBalls2014
             uint8_t bballsCOLOR[bballsMaxNUM_BALLS] ;                   // прикручено при адаптации для разноцветных мячиков
             uint8_t bballsX[bballsMaxNUM_BALLS] ;                       // прикручено при адаптации для распределения мячиков по радиусу лампы
@@ -333,14 +332,12 @@ public:
             int8_t vector[BALLS_AMOUNT][2U];
             float coord[BALLS_AMOUNT][2U];
 		};
-        /*
         struct {
             uint16_t lightersIdx;
             int8_t lightersSpeed[2U][LIGHTERS_AM];
             uint8_t lightersColor[LIGHTERS_AM];
             float lightersPos[2U][LIGHTERS_AM];
 		};
-        */
         struct { // радуги
             uint8_t hue;
 		};
@@ -348,115 +345,20 @@ public:
             uint8_t pulse_hue;
             uint8_t pulse_step;
 		};
-        /*
         struct {
             // Array of temperature readings at each simulation cell
             byte heat[WIDTH][HEIGHT];
 		};
         */
-/*
-        struct { // Огонь
-            uint8_t pcnt;
-            uint8_t shiftHue[HEIGHT];                              // массив дороожки горизонтального смещения пламени (hueMask)
-            uint8_t line[WIDTH];
-            uint8_t shiftValue[HEIGHT];                            // массив дороожки горизонтального смещения пламени (hueValue)
-            unsigned char matrixValue[8][16];
-		};
-*/
-/*
-        struct { // радужная комета / smoke / rain
-            uint8_t eNs_noisesmooth;
-            uint8_t rhue;
-            //uint8_t smokeHue;
-            //float xSmokePos;
-            //float xSmokePos2;
-            uint16_t noiseX;
-            uint16_t noiseY;
-            uint16_t noiseZ;
-            uint8_t nline[WIDTH];
-
-            uint32_t e_x[NUM_LAYERS];
-            uint32_t e_y[NUM_LAYERS];
-            uint32_t e_z[NUM_LAYERS];
-            uint32_t e_scaleX[NUM_LAYERS];
-            uint32_t e_scaleY[NUM_LAYERS];
-            uint8_t noise3d[NUM_LAYERS][WIDTH][HEIGHT];
-            //uint8_t ledsbuff[sizeof(CRGB)* NUM_LEDS];
-        };
-*/
-/*
-        struct { // стая
-            bool predatorPresent;
-            uint8_t hueoffset;
-            char predator[sizeof(Boid)];
-            char wind[sizeof(PVector)];
-            char boids[sizeof(Boid)*AVAILABLE_BOID_COUNT];
-		};
-*/
         struct { // будильник "рассвет"
             uint8_t dawnCounter;                                           // счётчик первых шагов будильника
             time_t startmillis;
             CHSV dawnColorMinus[6];
 		};
-/*
-        struct { // дрифты
-            uint8_t dri_phase;
-		};
-*/
-/*
-        struct { // мерцание
-            uint8_t thue;
-            CRGB ledsbuff[NUM_LEDS];
-		};
-*/
-/*
-        struct { // радар
-            uint8_t eff_offset;        // глобальная переменная для работы эффектов (обычно применяется для циклического пересчета hue, количества кадров и др...)
-            uint8_t eff_theta;         // глобальная переменная угла для работы эффектов
-		};
-*/
-/*
-        struct { // волны
-            uint8_t whue;
-            uint8_t waveTheta;
-		};
-*/
+        /*
         struct {
             int8_t peakX[2][WIDTH];
         };
-/*
-        struct { // огонь2018
-            uint32_t noise32_x[NUM_LAYERS2];
-            uint32_t noise32_y[NUM_LAYERS2];
-            uint32_t noise32_z[NUM_LAYERS2];
-            uint32_t scale32_x[NUM_LAYERS2];
-            uint32_t scale32_y[NUM_LAYERS2];
-            uint8_t fire18heat[NUM_LEDS];
-            uint8_t noise3dx[NUM_LAYERS2][WIDTH][HEIGHT];
-        };
-*/
-/*
-        struct { // кодовый замок
-            uint8_t ringColor[HEIGHT]; // начальный оттенок каждого кольца (оттенка из палитры) 0-255
-            uint8_t huePos[HEIGHT]; // местоположение начального оттенка кольца 0-WIDTH-1
-            uint8_t shiftHueDir[HEIGHT]; // 4 бита на ringHueShift, 4 на ringHueShift2
-            ////ringHueShift[ringsCount]; // шаг градиета оттенка внутри кольца -8 - +8 случайное число
-            ////ringHueShift2[ringsCount]; // обычная скорость переливания оттенка всего кольца -8 - +8 случайное число
-            uint8_t currentRing; // кольцо, которое в настоящий момент нужно провернуть
-            uint8_t stepCount; // оставшееся количество шагов, на которое нужно провернуть активное кольцо - случайное от WIDTH/5 до WIDTH-3            
-        };
-*/
-/*
-        struct { // cube2d
-            bool direction; // направление вращения в данный момент
-            uint8_t pauseSteps; // осталось шагов паузы
-            uint8_t currentStep; // текущий шаг сдвига (от 0 до GSHMEM.shiftSteps-1)
-            uint8_t shiftSteps; // всего шагов сдвига (от 3 до 4)
-            uint8_t gX, gY; // глобальный X и глобальный Y нашего "кубика"
-            int8_t globalShiftX, globalShiftY; // нужно ли сдвинуть всё поле по окончаии цикла и в каком из направлений (-1, 0, +1)
-            uint8_t storage[WIDTH][HEIGHT];
-        };
-*/
         // struct { // time
         //     bool timeShiftDir; // направление сдвига
         //     float curTimePos; // текущая позиция вывода
@@ -467,6 +369,7 @@ public:
             float snowShift; // сдвиг снега
         };
 		//uint8_t raw[1024];
+        */
 	};
 };
 
@@ -650,18 +553,21 @@ public:
 
 class EffectBBalls : public EffectCalc {
 private:
-    uint8_t bballsCOLOR[bballsMaxNUM_BALLS] ;                   // прикручено при адаптации для разноцветных мячиков
-    uint8_t bballsX[bballsMaxNUM_BALLS] ;                       // прикручено при адаптации для распределения мячиков по радиусу лампы
-    int   bballsPos[bballsMaxNUM_BALLS] ;                       // The integer position of the dot on the strip (LED index)
-    float bballsHi ;                         // An array of heights
-    float bballsVImpact[bballsMaxNUM_BALLS] ;                   // As time goes on the impact velocity will change, so make an array to store those values
-    float bballsTCycle ;                    // The time since the last time the ball struck the ground
-    float bballsCOR[bballsMaxNUM_BALLS] ;                       // Coefficient of Restitution (bounce damping)
-    long  bballsTLast[bballsMaxNUM_BALLS] ;                     // The clock time of the last ground strike
+    // можно переписать на динамческую память
+    uint8_t bballsNUM_BALLS;                             // Number of bouncing balls you want (recommend < 7, but 20 is fun in its own way) ... количество мячиков теперь задаётся бегунком, а не константой
+    uint8_t bballsCOLOR[bballsMaxNUM_BALLS] ;           // прикручено при адаптации для разноцветных мячиков
+    uint8_t bballsX[bballsMaxNUM_BALLS] ;               // прикручено при адаптации для распределения мячиков по радиусу лампы
+    int   bballsPos[bballsMaxNUM_BALLS] ;               // The integer position of the dot on the strip (LED index)
+    float bballsHi = 0.0;                                    // An array of heights
+    float bballsVImpact[bballsMaxNUM_BALLS] ;           // As time goes on the impact velocity will change, so make an array to store those values
+    float bballsTCycle = 0.0;                                // The time since the last time the ball struck the ground
+    float bballsCOR[bballsMaxNUM_BALLS] ;               // Coefficient of Restitution (bounce damping)
+    long  bballsTLast[bballsMaxNUM_BALLS] ;             // The clock time of the last ground strike
     float bballsShift[bballsMaxNUM_BALLS];
     bool bBallsRoutine(CRGB *leds, const char *param);
 
 public:
+    void load();
     bool run(CRGB *ledarr, const char *opt=nullptr) override;
 };
 
@@ -695,7 +601,7 @@ public:
 class EffectPulse : public EffectCalc {
 private:
     uint8_t pulse_hue;
-    uint8_t pulse_step;
+    uint8_t pulse_step = 0;
     bool pulseRoutine(CRGB *leds, const char *param);
 
 public:
@@ -704,12 +610,14 @@ public:
 
 class EffectBall : public EffectCalc {
 private:
+    int8_t ballSize;
     int16_t ballColor;
     int8_t vectorB[2U];
     float coordB[2U];
     bool ballRoutine(CRGB *leds, const char *param);
 
 public:
+    void load();
     bool run(CRGB *ledarr, const char *opt=nullptr) override;
 };
 
@@ -717,9 +625,11 @@ class EffectLighterTracers : public EffectCalc {
 private:
     int8_t vector[BALLS_AMOUNT][2U];
     float coord[BALLS_AMOUNT][2U];
+    int16_t ballColors[BALLS_AMOUNT];
     bool lighterTracersRoutine(CRGB *leds, const char *param);
 
 public:
+    void load() override;
     bool run(CRGB *ledarr, const char *opt=nullptr) override;
 };
 
@@ -739,6 +649,7 @@ private:
     bool colorsRoutine(CRGB *leds, const char *param);
 
 public:
+    void load() override;
     bool run(CRGB *ledarr, const char *opt=nullptr) override;
 };
 
@@ -761,7 +672,7 @@ public:
 class EffectSnow : public EffectCalc {
 private:
     bool snowRoutine(CRGB *leds, const char *param);
-    float snowShift; // сдвиг снега
+    float snowShift = 0.0; // сдвиг снега
 public:
     bool run(CRGB *ledarr, const char *opt=nullptr) override;
 };

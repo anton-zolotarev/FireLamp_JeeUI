@@ -437,18 +437,7 @@ void drawCircle(int16_t x0, int16_t y0, uint16_t radius, const CRGB & color){
   }
 }
 
-// uint8_t pulse_hue;
-// uint8_t pulse_step = 0;
 bool EffectPulse::pulseRoutine(CRGB *leds, const char *param) {
-    // if((millis() - myLamp.getEffDelay() - EFFECTS_RUN_TIMER) < (unsigned)(255-myLamp.effects.getSpeed())){
-    //   return;
-    // } else {
-    //   myLamp.setEffDelay(millis());
-    // }
-
-  if(myLamp.isLoading()){
-	pulse_step = 0;
-  }
   
   CRGBPalette16 palette;
   CRGB _pulse_color;
@@ -585,6 +574,10 @@ bool EffectRainbow::rainbowDiagonalRoutine(CRGB *leds, const char *param)
 }
 
 // ------------- цвета -----------------
+void EffectColors::load(){
+    myLamp.fillAll(CHSV(scale, 255U, 55U)); // еще не наступила смена цвета, поэтому выводим текущий  
+}
+
 bool EffectColors::run(CRGB *ledarr, const char *opt){
   // if (dryrun())
   //   return false;
@@ -594,20 +587,16 @@ bool EffectColors::run(CRGB *ledarr, const char *opt){
 bool EffectColors::colorsRoutine(CRGB *leds, const char *param)
 {
   static unsigned int step = 0; // доп. задержка
-  unsigned int delay = (myLamp.effects.getSpeed()==1)?4294967294:255-myLamp.effects.getSpeed()+1; // на скорости 1 будет очень долгое ожидание)))
+  unsigned int delay = (speed==1)?4294967294:255-speed+1; // на скорости 1 будет очень долгое ожидание)))
   
-  if (myLamp.isLoading()){ // начальная установка цвета
-    ihue = myLamp.effects.getScale();
-    myLamp.fillAll(CHSV(ihue, 255U, 55U)); // еще не наступила смена цвета, поэтому выводим текущий
-  } else {
     step=(step+1)%(delay+1);
     if(step!=delay) {
 
 #ifdef MIC_EFFECTS
   uint16_t mmf = myLamp.getMicMapFreq();
   uint16_t mmp = myLamp.getMicMapMaxPeak();
-  scale = myLamp.effects.getScale();
-  speed = myLamp.effects.getSpeed();
+  //scale = myLamp.effects.getScale();
+  //speed = myLamp.effects.getSpeed();
 
 #if defined(LAMP_DEBUG) && defined(MIC_EFFECTS)
 EVERY_N_SECONDS(1){
@@ -643,9 +632,8 @@ EVERY_N_SECONDS(1){
 #endif  
     }
     else {  
-      ihue += myLamp.effects.getScale(); // смещаемся на следущий
+      ihue += scale; // смещаемся на следущий
     }
-  }
   return true;
 }
 
@@ -715,10 +703,6 @@ bool EffectSnow::run(CRGB *ledarr, const char *opt){
 #define SNOW_SCALE (1.25) //0.25...5.0
 bool EffectSnow::snowRoutine(CRGB *leds, const char *param)
 {
-
-  if(myLamp.isLoading()){
-    snowShift = 0.0;
-  }
 
   snowShift = snowShift + myLamp.effects.getSpeed()/255.0;
 
@@ -882,43 +866,35 @@ bool EffectLighters::lightersRoutine(CRGB *leds, const char *param)
 }
 
 // ------------- светлячки со шлейфом -------------
-bool EffectLighterTracers::run(CRGB *ledarr, const char *opt){
-  return lighterTracersRoutine(*&ledarr, &*opt);
+void EffectLighterTracers::load(){
+  for (uint8_t j = 0U; j < BALLS_AMOUNT; j++)
+  {
+    int8_t sign;
+    // забиваем случайными данными
+    coord[j][0U] = WIDTH / 2;
+    random(0, 2) ? sign = 1 : sign = -1;
+    vector[j][0U] = random(4, 15) * sign;
+    coord[j][1U] = HEIGHT / 2;
+    random(0, 2) ? sign = 1 : sign = -1;
+    vector[j][1U] = random(4, 15) * sign;
+    //ballColors[j] = random(0, 9) * 28;
+  }
 }
 
-//#define BALLS_AMOUNT          (7U)                          // максимальное количество "шариков"
-#define CLEAR_PATH            (1U)                          // очищать путь
-#define BALL_TRACK            (1U)                          // (0 / 1) - вкл/выкл следы шариков
-#define TRACK_STEP            (70U)                         // длина хвоста шарика (чем больше цифра, тем хвост короче)
-bool EffectLighterTracers::lighterTracersRoutine(CRGB *leds, const char *param)
-{
-  // static int16_t coord[BALLS_AMOUNT][2U];
-  // static int8_t vector[BALLS_AMOUNT][2U];
-  int16_t ballColors[BALLS_AMOUNT];
 
-  if (myLamp.isLoading())
-  {
-    for (uint8_t j = 0U; j < BALLS_AMOUNT; j++)
-    {
-      int8_t sign;
-      // забиваем случайными данными
-      coord[j][0U] = WIDTH / 2;
-      random(0, 2) ? sign = 1 : sign = -1;
-      vector[j][0U] = random(4, 15) * sign;
-      coord[j][1U] = HEIGHT / 2;
-      random(0, 2) ? sign = 1 : sign = -1;
-      vector[j][1U] = random(4, 15) * sign;
-      //ballColors[j] = random(0, 9) * 28;
-    }
-  }
-
+bool EffectLighterTracers::run(CRGB *ledarr, const char *opt){
   // if((millis() - myLamp.getEffDelay() - EFFECTS_RUN_TIMER) < (unsigned)(255-myLamp.effects.getSpeed())){
   //   return;
   // } else {
   //   myLamp.setEffDelay(millis());
   // }
 
-  float speedfactor = myLamp.effects.getSpeed()/2048.0+0.01;
+  return lighterTracersRoutine(*&ledarr, &*opt);
+}
+
+bool EffectLighterTracers::lighterTracersRoutine(CRGB *leds, const char *param)
+{
+  float speedfactor = speed/2048.0+0.01;
 
   if (!BALL_TRACK)                                          // режим без следов шариков
   {
@@ -931,11 +907,11 @@ bool EffectLighterTracers::lighterTracersRoutine(CRGB *leds, const char *param)
   }
 
   // движение шариков
-  int maxBalls = (uint8_t)((BALLS_AMOUNT/255.0)*myLamp.effects.getScale()+0.99);
+  int maxBalls = (uint8_t)((BALLS_AMOUNT/255.0)*scale+0.99);
   for (uint8_t j = 0U; j < maxBalls; j++)
   {
     // цвет зависит от масштаба
-    ballColors[j] = myLamp.effects.getScale() * (maxBalls-j) * BALLS_AMOUNT + j;
+    ballColors[j] = scale * (maxBalls-j) * BALLS_AMOUNT + j;
           
     // движение шариков
     for (uint8_t i = 0U; i < 2U; i++)
@@ -999,34 +975,29 @@ bool EffectLightBalls::lightBallsRoutine(CRGB *leds, const char *param)
   return true;
 }
 
-// ------------- блуждающий кубик -------------
+// ------------- эффект "блуждающий кубик" -------------
+void EffectBall::load(){
+    //FastLED.clear();
+  ballSize = map(scale, 0U, 255U, 2U, max((uint8_t)min(WIDTH,HEIGHT) / 3, 2));
+  myLamp.setEffDelay(millis());
+  for (uint8_t i = 0U; i < 2U; i++)
+  {
+    coordB[i] = i? (WIDTH - ballSize) / 2 : (HEIGHT - ballSize) / 2;
+    vectorB[i] = random(8, 24) - 12;
+    ballColor = random(1, 255) * scale;
+  }
+}
+
 bool EffectBall::run(CRGB *ledarr, const char *opt){
   return ballRoutine(*&ledarr, &*opt);
 }
-#define RANDOM_COLOR          (1U)                          // случайный цвет при отскоке
+
 bool EffectBall::ballRoutine(CRGB *leds, const char *param)
 {
-  // static float coordB[2U];
-  // static int8_t vectorB[2U];
-  // static int16_t ballColor;
-  int8_t ballSize;
+  ballSize = map(scale, 0U, 255U, 2U, max((uint8_t)min(WIDTH,HEIGHT) / 3, 2));
 
-  ballSize = map(myLamp.effects.getScale(), 0U, 255U, 2U, max((uint8_t)min(WIDTH,HEIGHT) / 3, 2));
-
-  if (myLamp.isLoading())
-  {
-    //FastLED.clear();
-    myLamp.setEffDelay(millis());
-    for (uint8_t i = 0U; i < 2U; i++)
-    {
-      coordB[i] = i? (WIDTH - ballSize) / 2 : (HEIGHT - ballSize) / 2;
-      vectorB[i] = random(8, 24) - 12;
-      ballColor = random(1, 255) * myLamp.effects.getScale();
-    }
-  }
-
-  if((millis() - myLamp.getEffDelay() - EFFECTS_RUN_TIMER) > 10000){ // каждые 10 секунд коррекция направления
-    myLamp.setEffDelay(millis());
+// каждые 10 секунд коррекция направления
+  EVERY_N_SECONDS(10){
     for (uint8_t i = 0U; i < 2U; i++)
     {
       if(abs(vectorB[i])<12)
@@ -1268,23 +1239,10 @@ bool Effect3DNoise::run(CRGB *ledarr, const char *opt){
 //  https://github.com/githubcdr/Arduino/blob/master/bouncingballs/bouncingballs.ino
 //  With BIG thanks to the FastLED community!
 //  адаптация от SottNick
-bool EffectBBalls::run(CRGB *ledarr, const char *opt){
-  return bBallsRoutine(*&ledarr, &*opt);
-}
-
-#define bballsGRAVITY           (-10)              // Downward (negative) acceleration of gravity in m/s^2
-#define bballsH0                (2)                  // Starting height, in meters, of the ball (strip length)
-#define bballsVImpact0          (sqrt(-2 * bballsGRAVITY * bballsH0))
-//#define bballsMaxNUM_BALLS      (16U)                // максимальное количество мячиков прикручено при адаптации для бегунка Масштаб
-bool EffectBBalls::bBallsRoutine(CRGB *leds, const char *param)
-{
-  uint8_t bballsNUM_BALLS;                             // Number of bouncing balls you want (recommend < 7, but 20 is fun in its own way) ... количество мячиков теперь задаётся бегунком, а не константой
-  bballsNUM_BALLS =  map(myLamp.effects.getScale(), 0, 255, 1, bballsMaxNUM_BALLS);
-  byte speed_t = myLamp.effects.getSpeed();
-
-  if (myLamp.isLoading()){
+void EffectBBalls::load(){
     FastLED.clear();
-    randomSeed((unsigned)time(NULL) );
+    bballsNUM_BALLS =  map(scale, 0, 255, 1, bballsMaxNUM_BALLS);
+
     for (int i = 0 ; i < bballsNUM_BALLS ; i++) {          // Initialize variables
       bballsCOLOR[i] = random8();
       bballsX[i] = random8(1U, WIDTH);
@@ -1294,10 +1252,16 @@ bool EffectBBalls::bBallsRoutine(CRGB *leds, const char *param)
       bballsCOR[i] = 0.90 - float(i) / pow(bballsNUM_BALLS, 2);
       bballsShift[i] = false;
     }
-  }
+}
+
+bool EffectBBalls::run(CRGB *ledarr, const char *opt){
+  return bBallsRoutine(*&ledarr, &*opt);
+}
+
+bool EffectBBalls::bBallsRoutine(CRGB *leds, const char *param)
+{
+  bballsNUM_BALLS =  map(scale, 0, 255, 1, bballsMaxNUM_BALLS);
   
-  bballsTCycle = 0;
-  bballsHi = 0.0;
   myLamp.dimAll(50);
   for (int i = 0 ; i < bballsNUM_BALLS ; i++) {
     //myLamp.setLeds(myLamp.getPixelNumber(bballsX[i], bballsPos[i]), CRGB::Black); // off for the next loop around
@@ -1305,7 +1269,7 @@ bool EffectBBalls::bBallsRoutine(CRGB *leds, const char *param)
     bballsTCycle =  millis() - bballsTLast[i] ;     // Calculate the time since the last time the ball was on the ground
 
     // A little kinematics equation calculates positon as a function of time, acceleration (gravity) and intial velocity
-    bballsHi = 0.5 * bballsGRAVITY * pow( bballsTCycle/(1150 - speed_t * 3) , 2.0 ) + bballsVImpact[i] * bballsTCycle/(1150 - speed_t * 3);
+    bballsHi = 0.5 * bballsGRAVITY * pow( bballsTCycle/(1150 - speed * 3) , 2.0 ) + bballsVImpact[i] * bballsTCycle/(1150 - speed * 3);
 
     if ( bballsHi < 0 ) {  
       bballsTLast[i] = millis();                    

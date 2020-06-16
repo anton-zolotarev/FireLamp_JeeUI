@@ -472,7 +472,7 @@ public:
     virtual void setscl(const byte _scl);
 
     /**
-     * setrval - установка переменной R
+     * setrval - установка переменной R 
      */
     virtual void setrval(const byte _R);
 
@@ -490,11 +490,12 @@ public:
     virtual void palettemap(std::vector<PGMPallete*> &_pals, const uint8_t _val);
 
     /**
-     * костылик-времяночка пока не решим как обновлять параметры по событию
-     * метод лезет в массив настроек эффекта, вычитывает оттуда scale и R
-     * и обновляет палитру.
+     * метод выбирает текущую палитру '*curPalette' из набора дотупных палитр 'palettes'
+     * в соответствии со значением "бегунка" шкалы. В случае если задана паременная rval -
+     * метод использует значение R,  иначе используется значение scale
+     * (палитры меняются автоматом при изменении значения шкалы/R, метод оставлен для совместимости)
      */
-    void scalerefresh();
+    void scale2pallete();
 
 
     /**
@@ -1133,9 +1134,9 @@ public:
         return true; // сохранились
     }
 
-    void setBrightness(byte val) {effects[arrIdx].brightness = val; worker->setbrt(val);}
-    void setSpeed(byte val) {effects[arrIdx].speed = val; worker->setspd(val);}
-    void setScale(byte val) {effects[arrIdx].scale = val; worker->setscl(val);}
+    void setBrightness(byte val) {effects[arrIdx].brightness = val; if (worker) worker->setbrt(val);}
+    void setSpeed(byte val) {effects[arrIdx].speed = val; if (worker) worker->setspd(val);}
+    void setScale(byte val) {effects[arrIdx].scale = val; if (worker) worker->setscl(val);}
     byte getBrightness() { return effects[arrIdx].brightness; }
     byte getSpeed() { return effects[arrIdx].speed; }
     byte getScale() { return effects[arrIdx].scale; }
@@ -1282,7 +1283,8 @@ public:
         }
         return String(); // empty
     }
-    void setValue(const char *src, const _PTR type, const _PTR val){
+
+    void setValue(const char *src, const _PTR type, const char *val){
         DynamicJsonDocument doc(128);
         deserializeJson(doc,String(FPSTR(src)));
         JsonArray arr = doc.as<JsonArray>();
@@ -1297,6 +1299,10 @@ public:
         tmp.replace(F("\""),F("'")); // так делать не красиво, но шопаделаешь...
         //LOG(println, tmp);
         updateParam(tmp.c_str());
+
+        // устанавливаем переменну 'rval' если задается ключ 'R'
+        if (type == "R" && worker)
+            worker->setrval(atoi(val));
     }
 
 

@@ -97,9 +97,8 @@ void EffectCalc::setscl(byte _scl){
   scale = _scl;
   //LOG(printf, "Worker scale: %d\n", scale);
 
-  if (usepalettes)    // менять палитру в соответствие со шкалой, если выставлен флаг
-  //  palettemap(palettes, _scl);
-    scalerefresh();
+  if (usepalettes && !rval)    // менять палитру в соответствие со шкалой, если выставлен флаг
+    palettemap(palettes, _scl);
 }
 
 /**
@@ -109,7 +108,8 @@ void EffectCalc::setscl(byte _scl){
 void EffectCalc::setrval(const uint8_t _rval){
   rval = _rval;
   // при смене Rval меняем палитру
-  palettemap(palettes, _rval);
+  if (usepalettes)
+    palettemap(palettes, _rval);
 }
 
 // Load palletes into array
@@ -125,8 +125,14 @@ void EffectCalc::palettesload(){
   palettes.push_back(&RainbowStripeColors_p);
 
   usepalettes = true; // активируем "переключатель" палитр
+  scale2pallete();    // выставляем текущую палитру
 }
 
+/**
+ * palletemap - меняет указатель на текущую палитру из набора в соответствие с "ползунком"
+ * @param _val - байт "ползунка"
+ * @param _pals - набор с палитрами
+ */
 void EffectCalc::palettemap(std::vector<PGMPallete*> &_pals, const uint8_t _val){
 
   #define MAX_RANGE 255   // заложим дейфан пока нет динамических ползунков
@@ -149,17 +155,20 @@ void EffectCalc::palettemap(std::vector<PGMPallete*> &_pals, const uint8_t _val)
 }
 
 /**
- * костылик-времяночка пока не решим как обновлять параметры по событию
- * метод лезет в массив настроек эффекта, вычитывает оттуда scale и R
- * и обновляет палитру.
+ * метод выбирает текущую палитру '*curPalette' из набора дотупных палитр 'palettes'
+ * в соответствии со значением "бегунка" шкалы. В случае если задана паременная rval -
+ * метод использует значение R,  иначе используется значение scale
+ * (палитры меняются автоматом при изменении значения шкалы/R, метод оставлен для совместимости)
  */
-void EffectCalc::scalerefresh(){
+void EffectCalc::scale2pallete(){
+  if (!usepalettes)
+    return;
+
   String var = myLamp.effects.getValue(myLamp.effects.getCurrent()->param, F("R"));
   if(!var.isEmpty()){
     rval = var.toInt();
     palettemap(palettes, rval);
   } else {
-    scale = myLamp.effects.getScale();
     palettemap(palettes, scale);
   }
 }
@@ -1429,16 +1438,9 @@ bool EffectMetaBalls::metaBallsRoutine(CRGB *leds, const char *param)
 
 void EffectSpiro::load(){
   palettesload();    // подгружаем дефолтные палитры
-  scalerefresh();    // выбираем палитру согласно "шкале"
 }
 
 bool EffectSpiro::run(CRGB *ledarr, const char *opt){
-  /**
-   * дергаем костыль раз в секунду для обвления палитры/шкалы
-   */
-  EVERY_N_SECONDS(1){
-    scalerefresh();
-  }
   return spiroRoutine(*&ledarr, &*opt);
 }
 
@@ -1638,16 +1640,9 @@ bool EffectComet::rainbowComet3Routine(CRGB *leds, const char *param)
 // Prismata Loading Animation
 void EffectPrismata::load(){
   palettesload();    // подгружаем дефолтные палитры
-  scalerefresh();    // выбираем палитру согласно "шкале"
 }
 
 bool EffectPrismata::run(CRGB *ledarr, const char *opt){
-  /**
-   * дергаем костыль раз в секунду для обвления палитры/шкалы
-   */
-  EVERY_N_SECONDS(1){
-    scalerefresh();
-  }
   return prismataRoutine(*&ledarr, &*opt);
 }
 
@@ -1677,7 +1672,6 @@ bool EffectPrismata::prismataRoutine(CRGB *leds, const char *param)
 // bool predatorPresent = true;
 void EffectFlock::load(){
   palettesload();    // подгружаем дефолтные палитры
-  scalerefresh();    // выбираем палитру согласно "шкале"
 
   FastLED.clear();
   for (uint8_t i = 0; i < AVAILABLE_BOID_COUNT; i++) {
@@ -1698,12 +1692,6 @@ void EffectFlock::load(){
 }
 
 bool EffectFlock::run(CRGB *ledarr, const char *opt){
-  /**
-   * дергаем костыль раз в секунду для обвления палитры/шкалы
-   */
-  EVERY_N_SECONDS(1){
-    scalerefresh();
-  }
   return flockRoutine(*&ledarr, &*opt);
 }
 
@@ -1767,16 +1755,9 @@ bool EffectFlock::flockRoutine(CRGB *leds, const char *param) {
 // Copyright (c) 2014 Jason Coon
 void EffectSwirl::load(){
   palettesload();    // подгружаем дефолтные палитры
-  scalerefresh();    // выбираем палитру согласно "шкале"
 }
 
 bool EffectSwirl::run(CRGB *ledarr, const char *opt){
-  /**
-   * дергаем костыль раз в секунду для обвления палитры/шкалы
-   */
-  EVERY_N_SECONDS(1){
-    scalerefresh();
-  }
   return swirlRoutine(*&ledarr, &*opt);
 }
 
@@ -1827,17 +1808,9 @@ bool EffectSwirl::swirlRoutine(CRGB *leds, const char *param)
 
 void EffectDrift::load(){
   palettesload();    // подгружаем дефолтные палитры
-  scalerefresh();    // выбираем палитру согласно "шкале"
 }
 
 bool EffectDrift::run(CRGB *ledarr, const char *opt){
-  /**
-   * дергаем костыль раз в секунду для обвления палитры/шкалы
-   */
-  EVERY_N_SECONDS(1){
-    scalerefresh();
-  }
-
   myLamp.blur2d(beatsin8(3U, 5, 10 + scale*3));
   myLamp.dimAll(beatsin8(2U, 246, 252));
   _dri_speed = map8(myLamp.effects.getSpeed(), 1U, 20U);
@@ -1911,17 +1884,10 @@ bool EffectDrift::incrementalDriftRoutine2(CRGB *leds, const char *param)
 void EffectFreq::load()
 {
   palettesload();    // подгружаем дефолтные палитры
-  scalerefresh();    // выбираем палитру согласно "шкале"
   memset(peakX,0,sizeof(peakX));
 }
 
 bool EffectFreq::run(CRGB *ledarr, const char *opt){
-  /**
-   * дергаем костыль раз в секунду для обвления палитры/шкалы
-   */
-  EVERY_N_SECONDS(1){
-    scalerefresh();
-  }
   if (dryrun())
     return false;
   myLamp.setMicAnalyseDivider(0); // отключить авто-работу микрофона, т.к. тут все анализируется отдельно, т.е. не нужно выполнять одну и ту же работу дважды
@@ -2031,7 +1997,6 @@ bool EffectFreq::freqAnalyseRoutine(CRGB *leds, const char *param)
 
 void EffectTwinkles::load(){
   palettesload();    // подгружаем дефолтные палитры
-  scalerefresh();    // выбираем палитру согласно "шкале"
 
   tnum = palettescale;
 
@@ -2050,12 +2015,6 @@ void EffectTwinkles::load(){
 bool EffectTwinkles::run(CRGB *ledarr, const char *opt){
   if (dryrun())
     return false;
-  /**
-   * дергаем костыль раз в секунду для обвления палитры/шкалы
-   */
-  EVERY_N_SECONDS(1){
-    scalerefresh();
-  }
 
   return twinklesRoutine(*&ledarr, &*opt);
 }
@@ -2116,17 +2075,9 @@ bool EffectTwinkles::twinklesRoutine(CRGB *leds, const char *param)
 // v1.1 - +dither, +smoothing
 void EffectRadar::load(){
   palettesload();    // подгружаем дефолтные палитры
-  scalerefresh();    // выбираем палитру согласно "шкале"
 }
 
 bool EffectRadar::run(CRGB *ledarr, const char *opt){
-  /**
-   * дергаем костыль раз в секунду для обвления палитры/шкалы
-   */
-  EVERY_N_SECONDS(1){
-    scalerefresh();
-  }
-
   return radarRoutine(*&ledarr, &*opt);
 }
 
@@ -2161,16 +2112,9 @@ bool EffectRadar::radarRoutine(CRGB *leds, const char *param)
 // Адаптация от (c) SottNick
 void EffectWaves::load(){
   palettesload();    // подгружаем дефолтные палитры
-  scalerefresh();    // выбираем палитру согласно "шкале"
 }
 
 bool EffectWaves::run(CRGB *ledarr, const char *opt){
-  /**
-   * дергаем костыль раз в секунду для обвления палитры/шкалы
-   */
-  EVERY_N_SECONDS(1){
-    scalerefresh();
-  }
 
   waveCount = myLamp.effects.getSpeed() % 2;
   waveRotation = palettescale/8;  // тут ерунда какая-то... 
@@ -2249,19 +2193,13 @@ void EffectFire2012::load(){
   palettes.push_back(&PotassiumFireColors_p);
 
   usepalettes = true; // активируем "переключатель" палитр
-  scalerefresh();    // выбираем палитру согласно "шкале"
+  scale2pallete();    // выбираем палитру согласно "шкале"
 
   // Add entropy to random number generator; we use a lot of it.
   random16_add_entropy(random(256));
 }
 
 bool EffectFire2012::run(CRGB *ledarr, const char *opt){
-  /**
-   * дергаем костыль раз в секунду для обвления палитры/шкалы
-   */
-  EVERY_N_SECONDS(1){
-    scalerefresh();
-  }
 
   return fire2012Routine(*&ledarr, &*opt);
 }
@@ -2710,7 +2648,6 @@ void EffectRingsLock::ringsSet(){
 
 void EffectRingsLock::load(){
   palettesload();    // подгружаем дефолтные палитры
-  scalerefresh();    // выбираем палитру согласно "шкале"
 
   ringsSet();
   for (uint8_t i = 0; i < ringNb; i++)
@@ -2806,7 +2743,6 @@ bool EffectCube2d::run(CRGB *ledarr, const char *opt){
 
 void EffectCube2d::load(){
   palettesload();    // подгружаем дефолтные палитры
-  scalerefresh();    // выбираем палитру согласно "шкале"
 
   FastLED.clear();
   CRGB color;
@@ -3083,7 +3019,6 @@ bool EffectTime::run(CRGB *ledarr, const char *opt){
 
 void EffectTime::load(){
   palettesload();    // подгружаем дефолтные палитры
-  scalerefresh();    // выбираем палитру согласно "шкале"
 
   if(((curTimePos<=(signed)LET_WIDTH*2-(LET_WIDTH/2)) || (curTimePos>=(signed)WIDTH+(LET_WIDTH/2))) )
   {

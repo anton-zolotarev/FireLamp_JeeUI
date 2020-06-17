@@ -695,6 +695,7 @@ private:
     bool fire2012WithPalette(CRGB *leds, const char *param);
 
 public:
+    void load() override;
     bool run(CRGB *ledarr, const char *opt=nullptr) override;
 };
 
@@ -1043,6 +1044,7 @@ public:
     std::unique_ptr<EffectCalc> worker;           ///< указатель-класс обработчик текущего эффекта
 
     void loadConfig(const char *cfg = nullptr) {
+        Serial.println("Eff_Conf_loader 1.0");
         if(SPIFFS.begin()){
             File configFile;
             if(cfg == nullptr)
@@ -1267,11 +1269,15 @@ public:
     }
 
     String getValue(const char *src, const _PTR type){
+        //Serial.println("In Eff.h getValue");
         if(src==nullptr)
             return String(); // empty
-        //LOG(printf_P, PSTR("TEST: %s\n"),src);
+        //LOG(printf_P, PSTR("GetVALstr: %s\n"),src);
+        String tmp(FPSTR(src)); // разве сюда в src прилетат указатель на чары из структуры конфига, не нa флеш??
+        //String tmp(src);
+        if (tmp.length()==0)
+            return String(); // empty
         DynamicJsonDocument doc(128);
-        String tmp(FPSTR(src));
         tmp.replace(F("'"),F("\"")); // так делать не красиво, но шопаделаешь...
         deserializeJson(doc,tmp);
         JsonArray arr = doc.as<JsonArray>();
@@ -1285,6 +1291,7 @@ public:
     }
 
     void setValue(const char *src, const _PTR type, const char *val){
+        //Serial.println("In Eff.h setValue");
         DynamicJsonDocument doc(128);
         deserializeJson(doc,String(FPSTR(src)));
         JsonArray arr = doc.as<JsonArray>();

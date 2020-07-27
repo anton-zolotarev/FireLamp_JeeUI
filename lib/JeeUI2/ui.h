@@ -12,6 +12,7 @@ class frameSend {
         virtual ~frameSend(){};
         virtual void send(const String &data){};
         virtual void flush(){}
+        virtual void close(){}
 };
 
 class frameSendAll: public frameSend {
@@ -21,6 +22,7 @@ class frameSendAll: public frameSend {
         frameSendAll(AsyncWebSocket *server){ ws = server; }
         ~frameSendAll() { ws = nullptr; }
         void send(const String &data){ if (data.length()) ws->textAll(data); };
+        void close(){ ws->closeAll(); }
 };
 
 class frameSendClient: public frameSend {
@@ -30,6 +32,7 @@ class frameSendClient: public frameSend {
         frameSendClient(AsyncWebSocketClient *client){ cl = client; }
         ~frameSendClient() { cl = nullptr; }
         void send(const String &data){ if (data.length()) cl->text(data); };
+        void close(){ cl->close(); }
 };
 
 class frameSendHttp: public frameSend {
@@ -82,6 +85,8 @@ class Interface {
             send_hndl = nullptr;
             jee = nullptr;
         }
+
+        void close(){ send_hndl->close(); }
 
         void json_frame_value();
         void json_frame_interface(const String &name = "");

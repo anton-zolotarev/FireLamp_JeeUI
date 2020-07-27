@@ -666,13 +666,11 @@ void set_settings_wifi(Interface *interf, JsonObject *data){
 
     SETPARAM(F("hostname"));
 
-    String ssids = (*data)[F("wcssid")];
-    String pwds = (*data)[F("wcpass")];
-
     const char *ssid = (*data)[F("wcssid")];
     const char *pwd = (*data)[F("wcpass")];
 
-    if(ssid){
+    if (ssid) {
+        if (interf) interf->close();
         jee.wifi_connect(ssid, pwd);
     } else {
         LOG(println, F("WiFi: No SSID defined!"));

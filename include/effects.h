@@ -96,6 +96,10 @@ EFF_STORMYRAIN,                               // Тучка в банке
 EFF_FIRE2018,                                 // Огонь 2018
 EFF_RINGS,                                    // Кодовый замок
 EFF_CUBE2,                                    // Куб 2D
+EFF_PICASSO,                                  // Пикассо
+EFF_PICASSO2,                                  // Пикассо
+EFF_PICASSO3,                                  // Пикассо
+EFF_LEAPERS,                                  // Пикассо
 EFF_SMOKE,                                    // Дым
 EFF_TIME                                      // Часы (служебный, смещаем в конец)
 #ifdef MIC_EFFECTS
@@ -238,6 +242,10 @@ const char T_RINGS[] PROGMEM = "Кодовый замок";
 const char T_CUBE2[] PROGMEM = "Куб 2D";
 const char T_TIME[] PROGMEM = "Часы";
 const char T_SMOKE[] PROGMEM = "Дым";
+const char T_PICASSO[] PROGMEM = "Пикассо";
+const char T_PICASSO2[] PROGMEM = "Пикассо2";
+const char T_PICASSO3[] PROGMEM = "Пикассо3";
+const char T_LEAPERS[] PROGMEM = "Прыгуны";
 
 #ifdef MIC_EFFECTS
 const char T_FREQ[] PROGMEM = "Частотный анализатор";
@@ -918,6 +926,46 @@ public:
     bool run(CRGB *ledarr, EffectDesc *opt=nullptr) override;
 };
 
+class EffectPicasso : public EffectCalc {
+    typedef struct Particle{
+        float position_x = 0;
+        float position_y = 0;
+        float speed_x = 0;
+        float speed_y = 0;
+        CHSV color;
+        uint8_t hue_next = 0;
+        int8_t hue_step = 0;
+    } Particle;
+private:
+    Particle particles[20];
+    unsigned numParticles = 0;
+    void generate(bool reset = false);
+    void position();
+    bool picassoRoutine(CRGB *leds, EffectDesc *param);
+    bool picassoRoutine2(CRGB *leds, EffectDesc *param);
+    bool picassoRoutine3(CRGB *leds, EffectDesc *param);
+public:
+    bool run(CRGB *ledarr, EffectDesc *opt=nullptr) override;
+};
+
+class EffectLeapers : public EffectCalc {
+    typedef struct Leaper{
+        float x, y;
+        float xd, yd;
+        CHSV color;
+    } Leaper;
+private:
+    Leaper leapers[20];
+    unsigned numParticles = 0;
+    void generate(bool reset = false);
+    void restart_leaper(Leaper * l);
+    void move_leaper(Leaper * l);
+    void wu_pixel(uint32_t x, uint32_t y, CRGB col);
+    bool leapersRoutine(CRGB *leds, EffectDesc *param);
+public:
+    bool run(CRGB *ledarr, EffectDesc *opt=nullptr) override;
+};
+
 
 class EffectWorker {
 private:
@@ -1004,6 +1052,10 @@ private:
         effects.add(new EffectDesc(EFF_RINGS, T_RINGS, EFF_ENABLED));
         effects.add(new EffectDesc(EFF_CUBE2, T_CUBE2, EFF_ENABLED));
         effects.add(new EffectDesc(EFF_SMOKE, T_SMOKE, EFF_ENABLED_R));
+        effects.add(new EffectDesc(EFF_PICASSO, T_PICASSO, EFF_ENABLED));
+        effects.add(new EffectDesc(EFF_PICASSO2, T_PICASSO2, EFF_ENABLED));
+        effects.add(new EffectDesc(EFF_PICASSO3, T_PICASSO3, EFF_ENABLED));
+        effects.add(new EffectDesc(EFF_LEAPERS, T_LEAPERS, EFF_ENABLED));
         effects.add(new EffectDesc(EFF_TIME, T_TIME, EFF_ENABLED));
 #ifdef MIC_EFFECTS
         effects.add(new EffectDesc(EFF_FREQ, T_FREQ, EFF_ENABLED));

@@ -116,7 +116,6 @@ private:
     bool isEffectsDisabledUntilText:1; // признак отключения эффектов, пока выводится текст
     bool isOffAfterText:1; // признак нужно ли выключать после вывода текста
     bool isEventsHandled:1; // глобальный признак обработки событий
-    bool isForcedWifi:1; // в случае режима AP один раз до нажатия "Выйти из настроек" форсируем переключение на вкладку WiFi, дальше этого не делаем
 #ifdef MIC_EFFECTS
     bool isCalibrationRequest:1; // находимся ли в режиме калибровки микрофона
     bool isMicOn:1; // глобальное включение/выключение микрофона
@@ -175,7 +174,11 @@ private:
 
 #ifdef VERTGAUGE
     byte xStep; byte xCol; byte yStep; byte yCol; // для индикатора
-    void GaugeShow();
+    unsigned long gauge_time = 0;
+    unsigned gauge_val = 0;
+    unsigned gauge_max = 0;
+    byte gauge_hue = 0;
+    void GaugeMix();
 #endif
     void ConfigSaveCheck(){ if(tmConfigSaveTime.isReady()) {if(effects.autoSaveConfig()) tmConfigSaveTime.setInterval(0); } }
 
@@ -224,16 +227,18 @@ public:
     void setMicAnalyseDivider(uint8_t val) {micAnalyseDivider = val&3;}
 #endif
 
+#ifdef VERTGAUGE
+    void GaugeShow(unsigned val, unsigned max, byte hue = 10);
+#endif
+
     // Lamp brightness control (здесь методы работы с конфигурационной яркостью, не с LED!)
-    byte getLampBrightness() { return (mode == MODE_DEMO || isGlobalBrightness)?globalBrightness:effects.getBrightness();}
-    byte getNormalizedLampBrightness() { return (byte)(((unsigned int)BRIGHTNESS)*((mode==MODE_DEMO || isGlobalBrightness)?globalBrightness:effects.getBrightnessS())/255);}
-    void setLampBrightness(byte brg) { if(mode == MODE_DEMO || isGlobalBrightness) {setGlobalBrightness(brg);} else {effects.setBrightnessS(brg);} }
+    byte getLampBrightness() { return isGlobalBrightness? globalBrightness : effects.getBrightness();}
+    byte getNormalizedLampBrightness() { return (byte)(((unsigned int)BRIGHTNESS) * (isGlobalBrightness? globalBrightness : effects.getBrightnessS()) / 255);}
+    void setLampBrightness(byte brg) { if (isGlobalBrightness) setGlobalBrightness(brg); else effects.setBrightnessS(brg); }
     void setGlobalBrightness(byte brg) {globalBrightness = brg;}
     void setIsGlobalBrightness(bool val) {isGlobalBrightness = val;}
     bool IsGlobalBrightness() {return isGlobalBrightness;}
-    bool isForceWifi() {return isForcedWifi;}
     bool isAlarm() {return mode == MODE_ALARMCLOCK;}
-    void setForceWifi(bool val) {isForcedWifi = val;}
     int getmqtt_int() {return mqtt_int;}
     void semqtt_int(int val) {mqtt_int = val;}
 
@@ -289,6 +294,11 @@ public:
     uint32_t getPixColorXY(uint16_t x, uint16_t y) { return getPixColor(getPixelNumber(x, y)); } // функция получения цвета пикселя в матрице по его координатам
     void fillAll(CRGB color); // залить все
     void drawPixelXY(int16_t x, int16_t y, CRGB color); // функция отрисовки точки по координатам X Y
+    void drawPixelXYF(float x, float y, CRGB color);
+    void drawLine(int x1, int y1, int x2, int y2, CRGB color);
+    void drawLineF(float x1, float y1, float x2, float y2, CRGB color);
+    void drawCircle(int16_t x0, int16_t y0, int16_t radius, CRGB color);
+    void drawCircleF(float x0, float y0, float radius, CRGB color);
     CRGB *getUnsafeLedsArray(){return leds;}
     CRGB *setLeds(uint16_t idx, CHSV val) { leds[idx] = val; return &leds[idx]; }
     CRGB *setLeds(uint16_t idx, CRGB val) { leds[idx] = val; return &leds[idx]; }

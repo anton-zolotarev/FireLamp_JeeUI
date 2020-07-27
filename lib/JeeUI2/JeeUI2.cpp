@@ -150,11 +150,27 @@ void jeeui2::section_handle_add(const String &name, buttonCallback response)
     LOG(printf_P, PSTR("REGISTER: %s\n"), name.c_str());
 }
 
+/**
+ * Возвращает указатель на строку со значением параметра из конфига
+ * В случае отсутствующего параметра возвращает пустой указатель
+ */
+const char* jeeui2::param(const char* key)
+{
+    const char* value = cfg[key];
+    if (value){
+        LOG(printf_P, PSTR("READ key (%s) value (%s) MEM: %u\n"), key, value, ESP.getFreeHeap());
+    }
+
+    return value;
+}
+
+/**
+ * обертка над param в виде String
+ * В случае несуществующего ключа возвращает пустую строку
+ */
 String jeeui2::param(const String &key)
 {
-    String value = cfg[key].as<String>();
-    LOG(print, F("READ: "));
-    LOG(printf_P, PSTR("key (%s) value (%s) MEM: %u\n"), key.c_str(), value.c_str(), ESP.getFreeHeap());
+    String value(param(key.c_str()));
     return value;
 }
 
@@ -170,16 +186,24 @@ void notFound(AsyncWebServerRequest *request) {
 }
 
 void jeeui2::init(){
-#ifdef LAMP_DEBUG
-    nonWifiVar();
+//#ifdef LAMP_DEBUG
+//    nonWifiVar();
     load();
     LOG(println, String(F("CONFIG: ")) + jee.deb());
-#endif
-    ap(20000); // если в течении 20 секунд не удастся подключиться к Точке доступа - запускаем свою (параметр "wifi" сменится с AP на STA)
+//#endif
+    //ap(20000); // если в течении 20 секунд не удастся подключиться к Точке доступа - запускаем свою (параметр "wifi" сменится с AP на STA)
 
-    WiFi.persistent(false);     // не сохраняем креды от WiFi во флеш, т.к. они у нас уже лежат в конфиге
+    //WiFi.persistent(false);     // не сохраняем креды от WiFi во флеш, т.к. они у нас уже лежат в конфиге
+    #ifdef ESP8266
+        e1 = WiFi.onStationModeGotIP(std::bind(&jeeui2::onSTAGotIP, this, std::placeholders::_1));
+        e2 = WiFi.onStationModeDisconnected(std::bind(&jeeui2::onSTADisconnected, this, std::placeholders::_1));
+        e3 = WiFi.onStationModeConnected(std::bind(&jeeui2::onSTAConnected, this, std::placeholders::_1));
+    #else
+        WiFi.onEvent(std::bind(&jeeui2::WiFiEvent, this, std::placeholders::_1));
+    #endif
+
     wifi_connect();
-    LOG(println, String(F("MAC: ")) + jee.mac);
+    //LOG(println, String(F("MAC: ")) + jee.mac);
 }
 
 void jeeui2::begin(){
@@ -265,31 +289,39 @@ void jeeui2::begin(){
 
     server.on(PSTR("/update"), HTTP_POST, [](AsyncWebServerRequest *request){
         __shouldReboot = !Update.hasError();
-        AsyncWebServerResponse *response = request->beginResponse(200, FPSTR(PGmimetxt), (__shouldReboot?F("OK"):F("FAIL")));
-        response->addHeader(F("Connection"), F("close"));
-        request->send(response);
+        if (__shouldReboot) {
+            request->redirect(F("/"));
+        } else {
+            AsyncWebServerResponse *response = request->beginResponse(200, FPSTR(PGmimetxt), F("FAIL"));
+            response->addHeader(F("Connection"), F("close"));
+            request->send(response);
+        }
     },[](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final){
-        if(!index){
-            Serial.printf_P(PSTR("Update Start: %s\n"), filename.c_str());
+        if (!index) {
 #ifndef ESP32
             Update.runAsync(true);
 #endif
-            if(!Update.begin((ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000)){
+            int type = (data[0] == 0xe9 || data[0] == 0x1f)? U_FLASH : U_FS;
+            size_t size = (type == U_FLASH)? ((ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000) : (uintptr_t)&_FS_end - (uintptr_t)&_FS_start;
+            Serial.printf_P(PSTR("Update %s Start (%u)\n"), (type == U_FLASH)? F("FLASH") : F("FS"), request->contentLength());
+
+            if (!Update.begin(size, type)) {
                 Update.printError(Serial);
             }
         }
-        if(!Update.hasError()){
+        if (!Update.hasError()) {
             if(Update.write(data, len) != len){
                 Update.printError(Serial);
             }
         }
-        if(final){
+        if (final) {
             if(Update.end(true)){
                 Serial.printf_P(PSTR("Update Success: %uB\n"), index+len);
             } else {
                 Update.printError(Serial);
             }
         }
+        uploadProgress(index + len, request->contentLength());
     });
 
     //First request will return 0 results unless you start scan from somewhere else (loop/setup)
@@ -349,7 +381,7 @@ void jeeui2::handle(){
 #ifdef ESP8266
     MDNS.update();
 #endif
-    _connected();
+    //_connected();
     mqtt_handle();
     udpLoop();
 
@@ -369,6 +401,7 @@ void jeeui2::handle(){
     send_pub();
 }
 
+/*
 void jeeui2::nonWifiVar(){
     getAPmac();
     if(param(F("wifi")) == F("null")) var(F("wifi"), F("AP"), true);
@@ -377,15 +410,4 @@ void jeeui2::nonWifiVar(){
     if(param(F("ap_ssid")) == F("null")) var(F("ap_ssid"), String(__IDPREFIX) + mc, true);
     if(param(F("ap_pass")) == F("null")) var(F("ap_pass"), "", true);
 }
-
-void jeeui2::getAPmac(){
-    if(*mc) return;
-    #ifdef ESP32
-    WiFi.mode(WIFI_MODE_AP);
-    #else
-    WiFi.mode(WIFI_AP);
-    #endif
-    String _mac(WiFi.softAPmacAddress());
-    _mac.replace(F(":"), F(""));
-    strncpy(mc, _mac.c_str(), sizeof(mc)-1);
-}
+*/

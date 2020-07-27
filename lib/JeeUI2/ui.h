@@ -12,6 +12,7 @@ class frameSend {
         virtual ~frameSend(){};
         virtual void send(const String &data){};
         virtual void flush(){}
+        virtual void close(){}
 };
 
 class frameSendAll: public frameSend {
@@ -21,6 +22,7 @@ class frameSendAll: public frameSend {
         frameSendAll(AsyncWebSocket *server){ ws = server; }
         ~frameSendAll() { ws = nullptr; }
         void send(const String &data){ if (data.length()) ws->textAll(data); };
+        void close(){ ws->closeAll(); }
 };
 
 class frameSendClient: public frameSend {
@@ -30,6 +32,7 @@ class frameSendClient: public frameSend {
         frameSendClient(AsyncWebSocketClient *client){ cl = client; }
         ~frameSendClient() { cl = nullptr; }
         void send(const String &data){ if (data.length()) cl->text(data); };
+        void close(){ cl->close(); }
 };
 
 class frameSendHttp: public frameSend {
@@ -83,6 +86,8 @@ class Interface {
             jee = nullptr;
         }
 
+        void close(){ send_hndl->close(); }
+
         void json_frame_value();
         void json_frame_interface(const String &name = "");
         bool json_frame_add(JsonObject obj);
@@ -127,6 +132,10 @@ class Interface {
         void select(const String &id, const String &label, bool directly = false);
         void select(const String &id, const String &value, const String &label, bool directly = false);
         void option(const String &value, const String &label);
+        /**
+         * элемент интерфейса checkbox
+         * @param directly - значение чекбокса при изменении сразу передается на сервер без отправки формы
+         */
         void checkbox(const String &id, const String &label, bool directly = false);
         void checkbox(const String &id, const String &value, const String &label, bool directly = false);
         void color(const String &id, const String &label);
@@ -138,6 +147,7 @@ class Interface {
         void button_submit(const String &section, const String &label, const String &color = "");
         void button_submit_value(const String &section, const String &value, const String &label, const String &color = "");
         void spacer(const String &label = "");
+        void comment(const String &label = "");
 };
 
 #endif

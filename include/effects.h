@@ -96,6 +96,10 @@ EFF_STORMYRAIN,                               // Тучка в банке
 EFF_FIRE2018,                                 // Огонь 2018
 EFF_RINGS,                                    // Кодовый замок
 EFF_CUBE2,                                    // Куб 2D
+EFF_PICASSO,                                  // Пикассо
+EFF_PICASSO2,                                  // Пикассо
+EFF_PICASSO3,                                  // Пикассо
+EFF_LEAPERS,                                  // Пикассо
 EFF_SMOKE,                                    // Дым
 EFF_TIME                                      // Часы (служебный, смещаем в конец)
 #ifdef MIC_EFFECTS
@@ -166,7 +170,7 @@ class EffectDesc{
     }
     ~EffectDesc(){
         if (flags.copy) {
-            delete eff_name;
+            free((void *)eff_name);
         }
     }
     bool canBeSelected(){ return flags.canBeSelected; }
@@ -238,6 +242,10 @@ const char T_RINGS[] PROGMEM = "Кодовый замок";
 const char T_CUBE2[] PROGMEM = "Куб 2D";
 const char T_TIME[] PROGMEM = "Часы";
 const char T_SMOKE[] PROGMEM = "Дым";
+const char T_PICASSO[] PROGMEM = "Пикассо";
+const char T_PICASSO2[] PROGMEM = "Пикассо2";
+const char T_PICASSO3[] PROGMEM = "Пикассо3";
+const char T_LEAPERS[] PROGMEM = "Прыгуны";
 
 #ifdef MIC_EFFECTS
 const char T_FREQ[] PROGMEM = "Частотный анализатор";
@@ -537,7 +545,7 @@ public:
 
 class EffectRainbow : public EffectCalc {
 private:
-    uint8_t hue;
+    float hue; // вещественное для малых скоростей, нужно приведение к uint8_t по месту
     bool rainbowHorVertRoutine(bool isVertical);
     bool rainbowDiagonalRoutine(CRGB *leds, EffectDesc *param);
 
@@ -884,13 +892,15 @@ private:
   uint8_t csum;   // reload checksum
 
   uint8_t pauseSteps; // осталось шагов паузы
-  uint8_t shiftSteps; // всего шагов сдвига (от 3 до 4)
-  uint8_t moveItem;     // индекс перемещаемого элемента
-  bool movedirection;   // направление смещения
+  uint8_t shiftSteps=0; // всего шагов сдвига
+  std::vector<int8_t> moveItems;     // индекс перемещаемого элемента
+  //bool movedirection;   // направление смещения
   bool direction; // направление вращения в текущем цикле (вертикаль/горизонталь)
 
   void cubesize();
   bool cube2dRoutine(CRGB *leds, EffectDesc *param);
+  void cube2dmoveCols(uint8_t moveItem, bool movedirection);
+  void cube2dmoveRows(uint8_t moveItem, bool movedirection);
 
 public:
     void load() override;
@@ -916,6 +926,46 @@ public:
     bool run(CRGB *ledarr, EffectDesc *opt=nullptr) override;
 };
 
+class EffectPicasso : public EffectCalc {
+    typedef struct Particle{
+        float position_x = 0;
+        float position_y = 0;
+        float speed_x = 0;
+        float speed_y = 0;
+        CHSV color;
+        uint8_t hue_next = 0;
+        int8_t hue_step = 0;
+    } Particle;
+private:
+    Particle particles[20];
+    unsigned numParticles = 0;
+    void generate(bool reset = false);
+    void position();
+    bool picassoRoutine(CRGB *leds, EffectDesc *param);
+    bool picassoRoutine2(CRGB *leds, EffectDesc *param);
+    bool picassoRoutine3(CRGB *leds, EffectDesc *param);
+public:
+    bool run(CRGB *ledarr, EffectDesc *opt=nullptr) override;
+};
+
+class EffectLeapers : public EffectCalc {
+    typedef struct Leaper{
+        float x, y;
+        float xd, yd;
+        CHSV color;
+    } Leaper;
+private:
+    Leaper leapers[20];
+    unsigned numParticles = 0;
+    void generate(bool reset = false);
+    void restart_leaper(Leaper * l);
+    void move_leaper(Leaper * l);
+    void wu_pixel(uint32_t x, uint32_t y, CRGB col);
+    bool leapersRoutine(CRGB *leds, EffectDesc *param);
+public:
+    bool run(CRGB *ledarr, EffectDesc *opt=nullptr) override;
+};
+
 
 class EffectWorker {
 private:
@@ -935,16 +985,27 @@ private:
     EffectWorker(const EffectWorker&);  // noncopyable
     EffectWorker& operator=(const EffectWorker&);  // noncopyable
 
-    void clear() {
+    void clearAll() {
         while (effects.size()) {
             EffectDesc *eff = effects.shift();
-            if (eff->flags.copy) delete eff;
+            delete eff;
         }
+        globEffIdx = effects.size();
+    }
+
+    void clearCopy() {
+        for (int i = 0; i < effects.size(); i++) {
+            EffectDesc *eff = effects[i];
+            if (!eff->flags.copy) continue;
+            delete eff;
+            effects.remove(i--);
+        }
+        globEffIdx = effects.size();
     }
 
     void initDefault() {
-        clear();
-        globEffIdx = 0;
+        clearAll();
+
         effects.add(new EffectDesc(EFF_NONE, nullptr, 0));
         effects.add(new EffectDesc(EFF_WHITE_COLOR, T_WHITE_COLOR, EFF_ENABLED));
         effects.add(new EffectDesc(EFF_COLORS, T_COLORS, EFF_ENABLED));
@@ -991,6 +1052,10 @@ private:
         effects.add(new EffectDesc(EFF_RINGS, T_RINGS, EFF_ENABLED));
         effects.add(new EffectDesc(EFF_CUBE2, T_CUBE2, EFF_ENABLED));
         effects.add(new EffectDesc(EFF_SMOKE, T_SMOKE, EFF_ENABLED_R));
+        effects.add(new EffectDesc(EFF_PICASSO, T_PICASSO, EFF_ENABLED));
+        effects.add(new EffectDesc(EFF_PICASSO2, T_PICASSO2, EFF_ENABLED));
+        effects.add(new EffectDesc(EFF_PICASSO3, T_PICASSO3, EFF_ENABLED));
+        effects.add(new EffectDesc(EFF_LEAPERS, T_LEAPERS, EFF_ENABLED));
         effects.add(new EffectDesc(EFF_TIME, T_TIME, EFF_ENABLED));
 #ifdef MIC_EFFECTS
         effects.add(new EffectDesc(EFF_FREQ, T_FREQ, EFF_ENABLED));
@@ -1035,6 +1100,8 @@ public:
                 LOG(println, error.code());
                 return;
             }
+
+            clearCopy();
 
             JsonArray arr = doc.as<JsonArray>();
             EffectDesc *eff;
@@ -1125,6 +1192,7 @@ public:
     byte getSpeedS() { return effects[selectIdx]->speed; }
     byte getScaleS() { return effects[selectIdx]->scale; }
     byte getRvalS() { return effects[selectIdx]->rval; }
+    byte isRvalS() { return effects[selectIdx]->isRval(); }
     const char *getNameS() {return effects[selectIdx]->eff_name;}
     const EFF_ENUM getEnS() {return effects[selectIdx]->eff_nb;}
 

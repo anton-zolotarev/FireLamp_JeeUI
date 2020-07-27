@@ -16,33 +16,44 @@ const char *btn_get_desc(BA action){
 		case BA_EFF_PREV: return PSTR("PREV");
 		case BA_SEND_TIME: return PSTR("TIME");
 		case BA_SEND_IP: return PSTR("IP");
-		case BA_WHITE_HI: return PSTR("WHITE_HI");
-		case BA_WHITE_LO: return PSTR("WHITE_LO");
+		case BA_WHITE_HI: return PSTR("WHITE HI");
+		case BA_WHITE_LO: return PSTR("WHITE LO");
+		case BA_WIFI_REC: return PSTR("WIFI REC");
 		default:;
 	}
 	return PSTR("");
 }
 
-void Button::activate(bool reverse){
+bool Button::activate(bool reverse){
 		uint8_t newval;
 		RA ract = RA_UNKNOWN;
+		bool ret = false;
 		if (reverse) direction = !direction;
 		switch (action) {
 			case BA_BRIGHT:
 				newval = constrain(myLamp.getLampBrightness() + (myLamp.getLampBrightness() / 25 + 1) * (direction * 2 - 1), 1 , 255);
 				if (newval == 1 || newval == 255) direction = !direction;
+#ifdef VERTGAUGE
+				myLamp.GaugeShow(newval, 255, 10);
+#endif
 				remote_action(RA::RA_BRIGHT_NF, String(newval).c_str(), NULL);
-				return;
+				return true;
 			case BA_SPEED:
 				newval = constrain(myLamp.effects.getSpeed() + (myLamp.effects.getSpeed() / 25 + 1) * (direction * 2 - 1), 1 , 255);
 				if (newval == 1 || newval == 255) direction = !direction;
+#ifdef VERTGAUGE
+				myLamp.GaugeShow(newval, 255, 100);
+#endif
 				remote_action(RA::RA_SPEED, String(newval).c_str(), NULL);
-				return;
+				return true;
 			case BA_SCALE:
 				newval = constrain(myLamp.effects.getScale() + (myLamp.effects.getScale() / 25 + 1) * (direction * 2 - 1), 1 , 255);
 				if (newval == 1 || newval == 255) direction = !direction;
+#ifdef VERTGAUGE
+				myLamp.GaugeShow(newval, 255, 150);
+#endif
 				remote_action(RA::RA_SCALE, String(newval).c_str(), NULL);
-				return;
+				return true;
 			case BA_ON: ract = RA_ON; break;
 			case BA_OFF: ract = RA_OFF; break;
 			case BA_DEMO: ract = RA_DEMO; break;
@@ -58,9 +69,11 @@ void Button::activate(bool reverse){
 			case BA_SEND_IP: ract = RA_SEND_IP; break;
 			case BA_WHITE_HI: ract = RA_WHITE_HI; break;
 			case BA_WHITE_LO: ract = RA_WHITE_LO; break;
+			case BA_WIFI_REC: ract = RA_WIFI_REC; break;
 			default:;
 		}
 		remote_action(ract, NULL);
+		return ret;
 }
 
 String Button::getName(){
@@ -83,7 +96,7 @@ String Button::getName(){
 		return buffer;
 };
 
-Buttons::Buttons(): buttons(), tmNumHoldTimer(NUMHOLD_TIME), touch(BTN_PIN, PULL_MODE, NORM_OPEN){
+Buttons::Buttons(): buttons(), holdtm(NUMHOLD_TIME), touch(BTN_PIN, PULL_MODE, NORM_OPEN){
 	holding = false;
 	buttonEnabled = true; // кнопка обрабатывается если true, пока что обрабатывается всегда :)
 	pinTransition = true;
@@ -130,11 +143,13 @@ void Buttons::buttonTick(){
 	touch.tick();
 	bool reverse = false;
 	if ((holding = touch.isHolded())) {
-		clicks = touch.getHoldClicks();
+		if (holdtm.isReady()) {
+			clicks = touch.getHoldClicks();
+		}
 		reverse = true;
 	} else
 	if ((holding = touch.isStep())) {
-
+		holdtm.reset();
 	} else
 	if (!touch.hasClicks() || !(clicks = touch.getClicks())) {
 		return;
@@ -149,7 +164,10 @@ void Buttons::buttonTick(){
 	Button btn(myLamp.isLampOn(), holding, clicks);
 	for (int i = 0; i < buttons.size(); i++) {
 		if (btn == *buttons[i]) {
-			buttons[i]->activate(reverse);
+			if (!buttons[i]->activate(reverse)) {
+				// действие не подразумевает повтора
+				touch.resetStates();
+			}
 			// break; // Не выходим после первого найденного совпадения. Можем делать макросы из нажатий
 		}
 	}

@@ -60,8 +60,7 @@ void setup() {
 #ifdef AUX_PIN
 	pinMode(AUX_PIN, OUTPUT);
 #endif
-
-    jee.udp(String(jee.mc)); // Ответ на UDP запрс. в качестве аргуиена - переменная, содержащая id по умолчанию
+    jee.udp(); // Ответ на UDP запрс. в качестве аргумента - переменная, содержащая macid (по умолчанию)
 
 #if defined(ESP8266) && defined(LED_BUILTIN_AUX) && !defined(__DISABLE_BUTTON0)
     jee.led(LED_BUILTIN_AUX, false); // назначаем пин на светодиод, который нам будет говорит о состоянии устройства. (быстро мигает - пытается подключиться к точке доступа, просто горит (или не горит) - подключен к точке доступа, мигает нормально - запущена своя точка доступа)
@@ -88,15 +87,18 @@ void setup() {
     ftp_setup(); // запуск ftp-сервера
 #endif
 
-    myLamp.events.setEventCallback(event_worker);
-    myLamp.timeProcessor.attach_callback(std::bind(&LAMP::setIsEventsHandled, &myLamp, true));
-
     sync_parameters();
     jee.mqtt(jee.param(F("m_host")), jee.param(F("m_port")).toInt(), jee.param(F("m_user")), jee.param(F("m_pass")), mqttCallback, true); // false - никакой автоподписки!!!
 
 #ifdef ESP_USE_BUTTON
     attachInterrupt(digitalPinToInterrupt(BTN_PIN), buttonpinisr, BUTTON_PRESS_TRANSITION);  // цепляем прерывание на кнопку
 #endif
+
+    // восстанавливаем настройки времени
+    myLamp.timeProcessor.tzsetup((jee.param(F("TZSET")).c_str()));
+    myLamp.timeProcessor.setcustomntp((jee.param(F("userntp")).c_str()));
+    myLamp.events.setEventCallback(event_worker);
+    myLamp.timeProcessor.attach_callback(std::bind(&LAMP::setIsEventsHandled, &myLamp, true));
 }
 
 void loop() {

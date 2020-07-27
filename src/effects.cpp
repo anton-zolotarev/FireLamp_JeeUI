@@ -404,35 +404,6 @@ bool EffectPulse::run(CRGB *ledarr, EffectDesc *opt){
   return pulseRoutine(*&ledarr, &*opt);
 }
 
-void drawCircle(int16_t x0, int16_t y0, uint16_t radius, const CRGB & color){
-  int a = radius, b = 0;
-  int radiusError = 1 - a;
-
-  if (radius == 0) {
-    myLamp.drawPixelXY(x0, y0, color);
-    return;
-  }
-
-  while (a >= b)  {
-    myLamp.drawPixelXY(a + x0, b + y0, color);
-    myLamp.drawPixelXY(b + x0, a + y0, color);
-    myLamp.drawPixelXY(-a + x0, b + y0, color);
-    myLamp.drawPixelXY(-b + x0, a + y0, color);
-    myLamp.drawPixelXY(-a + x0, -b + y0, color);
-    myLamp.drawPixelXY(-b + x0, -a + y0, color);
-    myLamp.drawPixelXY(a + x0, -b + y0, color);
-    myLamp.drawPixelXY(b + x0, -a + y0, color);
-    b++;
-    if (radiusError < 0)
-      radiusError += 2 * b + 1;
-    else
-    {
-      a--;
-      radiusError += 2 * (b - a + 1);
-    }
-  }
-}
-
 bool EffectPulse::pulseRoutine(CRGB *leds, EffectDesc *param) {
 
   CRGBPalette16 palette;
@@ -482,7 +453,7 @@ bool EffectPulse::pulseRoutine(CRGB *leds, EffectDesc *param) {
         _pulse_hue = pulse_hue;
         _pulse_color = CHSV(_pulse_hue, _sat, _dark);
       }
-      drawCircle(centerX, centerY, i, _pulse_color  );
+      myLamp.drawCircle(centerX, centerY, i, _pulse_color);
     }
   } else {
     centerX = random8(WIDTH - 5U) + 3U;
@@ -501,14 +472,14 @@ bool EffectPulse::pulseRoutine(CRGB *leds, EffectDesc *param) {
 //uint8_t hue;
 bool EffectRainbow::rainbowHorVertRoutine(bool isVertical)
 {
-#ifdef MIC_EFFECTS
-  hue += (4 * (myLamp.getMicMapMaxPeak()>map(rval, 1, 255, 80, 10)?5*(myLamp.getMicMapFreq()/255.0):1));
-#else
-  hue += 4;
-#endif
   for (uint8_t i = 0U; i < (isVertical?WIDTH:HEIGHT); i++)
   {
-    CHSV thisColor = CHSV((uint8_t)(hue + i * scale%170), 255, 255); // 1/3 без центральной между 1...255, т.е.: 1...84, 170...255
+#ifdef MIC_EFFECTS
+    uint8_t micPeak = myLamp.getMicMapMaxPeak();
+    CHSV thisColor = CHSV((uint8_t)(hue + i * (micPeak > map(speed, 1, 255, 100, 10) ? (scale - micPeak) : scale) % 170), 255, 255); // 1/3 без центральной между 1...255, т.е.: 1...84, 170...255
+#else
+    CHSV thisColor = CHSV((uint8_t)(hue + i * scale%170), 255, 255);
+#endif
     for (uint8_t j = 0U; j < (isVertical?HEIGHT:WIDTH); j++)
     {
       myLamp.drawPixelXY((isVertical?i:j), (isVertical?j:i), thisColor);
@@ -519,23 +490,13 @@ bool EffectRainbow::rainbowHorVertRoutine(bool isVertical)
 
 // ------------- радуга диагональная -------------
 bool EffectRainbow::run(CRGB *ledarr, EffectDesc *opt){
-  // if (dryrun())
-  //   return false;
   return rainbowDiagonalRoutine(*&ledarr, &*opt);
 }
 
 bool EffectRainbow::rainbowDiagonalRoutine(CRGB *leds, EffectDesc *param)
 {
-  if((millis() - lastrun - EFFECTS_RUN_TIMER)
-#ifdef MIC_EFFECTS
-    < (unsigned)(255-speed)*((myLamp.getMicMapMaxPeak()>scale%86+50)?(2.0*(50.0/myLamp.getMicMapMaxPeak())):1) ){
-#else
-    < (unsigned)(255-speed)){
-#endif
-    return false;
-  } else {
-    lastrun=millis();
-  }
+  // коэф. влияния замаплен на скорость, 4 ползунок нафиг не нужен
+  hue += (6.0 * (speed / 255.0) + 0.05 ); // скорость смещения цвета зависит от кривизны наклна линии, коэф. 6.0 и 0.05
 
   if(scale<85){
     rainbowHorVertRoutine(false);
@@ -545,14 +506,13 @@ bool EffectRainbow::rainbowDiagonalRoutine(CRGB *leds, EffectDesc *param)
     return true;
   }
 
-  hue += 4;
   for (uint8_t i = 0U; i < WIDTH; i++)
   {
     for (uint8_t j = 0U; j < HEIGHT; j++)
     {
       float twirlFactor = EffectMath::fmap((float)scale, 85, 170, 8.3, 24);      // на сколько оборотов будет закручена матрица, [0..3]
 #ifdef MIC_EFFECTS
-      twirlFactor *= myLamp.getMicMapMaxPeak() > map(rval, 1, 255, 80, 10) ? 1.5 * (myLamp.getMicMapFreq() / 255.0) : 1;
+      twirlFactor *= myLamp.getMicMapMaxPeak() > map(speed, 1, 255, 80, 10) ? 1.5f * ((float)myLamp.getMicMapFreq() / 255.0f) : 1.0f;
 #endif
       CRGB thisColor = CHSV((uint8_t)(hue + ((float)WIDTH / (float)HEIGHT * i + j * twirlFactor) * ((float)255 / (float)myLamp.getmaxDim())), 255, 255);
       myLamp.drawPixelXY(i, j, thisColor);
@@ -560,6 +520,7 @@ bool EffectRainbow::rainbowDiagonalRoutine(CRGB *leds, EffectDesc *param)
   }
   return true;
 }
+
 
 // ------------- цвета -----------------
 void EffectColors::load(){
@@ -1350,10 +1311,6 @@ bool EffectMetaBalls::metaBallsRoutine(CRGB *leds, EffectDesc *param)
       } else {
         myLamp.drawPixelXY(x, y, CHSV(0, 255, 255));
       }
-      // show the 3 points, too
-      myLamp.drawPixelXY(x1, y1, CRGB(255, 255, 255));
-      myLamp.drawPixelXY(x2, y2, CRGB(255, 255, 255));
-      myLamp.drawPixelXY(x3, y3, CRGB(255, 255, 255));
     }
   }
   return true;
@@ -2729,27 +2686,44 @@ bool EffectCube2d::cube2dRoutine(CRGB *leds, EffectDesc *param)
     return false; // пропускаем кадры после прокрутки кубика (делаем паузу)
   }
 
-  CRGB color, color2;
-  uint16_t x, y, anim0;
-
   if (!shiftSteps) {  // если цикл вращения завершён
     // ====== определяем направление прокруток на будущий цикл
     pauseSteps = CUBE2D_PAUSE_FRAMES;
     direction = random8()%2;  // сдвиг 0 - строки, 1 - столбцы
-    moveItem = random8()%(direction ? cntX : cntY);
-    movedirection = random8()%2;  // 1 - fwd, 0 - bkwd
+    moveItems.resize(direction ? cntX : cntY, 0);
+
+    for (uint8_t i=0; i<(direction ? cntX : cntY); i++){
+      moveItems.at(i)= random8()%3; // 1 - fwd, 0 - bkw, 2 - none
+    }
+
     shiftSteps = ((direction ? sizeY : sizeX)+1) * random8(direction ? cntY : cntX);  // такой рандом добавляет случайную задержку в паузу, попадая на "0"
     return false;
   }
 
-  //LOG(printf_P, PSTR("Cube2D Move: dir=%d, steps=%d, movdir=%d\n"), direction, shiftSteps, movedirection);
+
   //двигаем, что получилось...
   shiftSteps--;
-  if (direction)  // идём по горизонтали, крутим по вертикали (столбцы двигаются)
-  {
+
+  for (uint8_t i=0; i<(direction ? cntX : cntY); i++){
+    if (moveItems.at(i)==2) // skip some items
+      continue;
+
+    direction ? cube2dmoveCols(i, moveItems.at(i)) : cube2dmoveRows(i, moveItems.at(i));
+  }
+
+  return true;
+}
+
+// идём по горизонтали, крутим по вертикали (столбцы двигаются)
+void EffectCube2d::cube2dmoveCols(uint8_t moveItem, bool movedirection){
+      uint16_t x, y, anim0;
+  CRGB color, color2;
+
       x = moveItem * (sizeX + 1U);
       anim0 = 0;
-      if (!movedirection) // если крутим столбец вниз
+
+      // если крутим столбец вниз
+      if (!movedirection)
         {
           color = myLamp.getPixColorXY(x, anim0);                                   // берём цвет от нижней строчки
           for (uint8_t k = anim0; k < anim0+fieldY-1; k++)
@@ -2760,9 +2734,10 @@ bool EffectCube2d::cube2dRoutine(CRGB *leds, EffectDesc *param)
           }
           for   (uint8_t m = x; m < x + sizeX; m++)
             myLamp.setLeds(myLamp.getPixelNumber(m, anim0+fieldY-1), color);                  // цвет нижней строчки копируем на всю верхнюю
-          return true;
+          return;
         }
-      // shift > 0 крутим столбец вверх
+
+      // крутим столбец вверх
       color = myLamp.getPixColorXY(x,anim0+fieldY-1);                            // берём цвет от верхней строчки
       for (uint8_t k = anim0+fieldY-1; k > anim0 ; k--)
       {
@@ -2772,13 +2747,18 @@ bool EffectCube2d::cube2dRoutine(CRGB *leds, EffectDesc *param)
       }
       for   (uint8_t m = x; m < x + sizeX; m++)
         myLamp.setLeds(myLamp.getPixelNumber(m, anim0), color);                         // цвет верхней строчки копируем на всю нижнюю
-      return true;
-  }
+}
 
-  // идём по вертикали, крутим по горизонтали (строки двигаются)
+// идём по вертикали, крутим по горизонтали (строки двигаются)
+void EffectCube2d::cube2dmoveRows(uint8_t moveItem, bool movedirection){
+  uint16_t x, y, anim0;
+  CRGB color, color2;
+
   y = moveItem * (sizeY + 1U);
   anim0 = 0;
-  if (!movedirection) // если крутим строку влево
+
+  // крутим строку влево
+  if (!movedirection)
   {
     color = myLamp.getPixColorXY(anim0, y);                            // берём цвет от левой колонки (левого пикселя)
     for (uint8_t k = anim0; k < anim0+fieldX-1; k++)
@@ -2789,7 +2769,7 @@ bool EffectCube2d::cube2dRoutine(CRGB *leds, EffectDesc *param)
     }
     for   (uint8_t m = y; m < y + sizeY; m++)
       myLamp.setLeds(myLamp.getPixelNumber(anim0+fieldX-1, m), color);                  // цвет левой колонки копируем на всю правую
-    return true;
+    return;
   }
 
   //  крутим строку вправо
@@ -2803,9 +2783,210 @@ bool EffectCube2d::cube2dRoutine(CRGB *leds, EffectDesc *param)
   for   (uint8_t m = y; m < y + sizeY; m++)
     myLamp.setLeds(myLamp.getPixelNumber(anim0, m), color);                          // цвет правой колонки копируем на всю левую
 
+}
+
+void EffectPicasso::generate(bool reset){
+  double minSpeed = 0.2, maxSpeed = 0.8;
+  unsigned num = map(scale, 0U, 255U, 6U, sizeof(particles) / sizeof(*particles));
+
+  for (unsigned i = numParticles; i < num; i++) {
+    Particle *curr = (Particle *)&particles[i];
+    curr->position_x = random8(0, WIDTH);
+    curr->position_y = random8(0, HEIGHT);
+
+    curr->speed_x = +((-maxSpeed / 3) + (maxSpeed * (float)random(1, 100) / 100));
+    curr->speed_x += curr->speed_x > 0 ? minSpeed : -minSpeed;
+
+    curr->speed_y = +((-maxSpeed / 2) + (maxSpeed * (float)random(1, 100) / 100));
+    curr->speed_y += curr->speed_y > 0 ? minSpeed : -minSpeed;
+
+    curr->color = CHSV(random8(1U, 255U), 255U, 255U);
+    curr->hue_next = curr->color.h;
+  };
+
+  for (unsigned i = 0; i < num; i++) {
+    if (reset) {
+      particles[i].hue_next = random8(1U, 255U);
+      particles[i].hue_step = (particles[i].hue_next - particles[i].color.h) / 25;
+    }
+    if (particles[i].hue_next != particles[i].color.h && particles[i].hue_step) {
+      particles[i].color.h += particles[i].hue_step;
+    }
+  }
+  numParticles = num;
+}
+
+void EffectPicasso::position(){
+  for (unsigned i = 0; i < numParticles; i++) {
+    Particle *curr = (Particle *)&particles[i];
+    if (curr->position_x + curr->speed_x > WIDTH || curr->position_x + curr->speed_x < 0) {
+      curr->speed_x = -curr->speed_x;
+    }
+
+    if (curr->position_y + curr->speed_y > HEIGHT || curr->position_y + curr->speed_y < 0) {
+      curr->speed_y = -curr->speed_y;
+    }
+
+    curr->position_x += curr->speed_x;
+    curr->position_y += curr->speed_y;
+  };
+}
+
+bool EffectPicasso::picassoRoutine(CRGB *leds, EffectDesc *param){
+  generate();
+  position();
+
+  for (unsigned i = 0; i < numParticles - 2; i+=2) {
+    Particle *p1 = (Particle *)&particles[i];
+    Particle *p2 = (Particle *)&particles[i + 1];
+    myLamp.drawLine(p1->position_x, p1->position_y, p2->position_x, p2->position_y, p1->color);
+  }
+
+  EVERY_N_MILLIS(20000){
+    generate(true);
+  }
+
+  myLamp.blur2d(80);
   return true;
 }
 
+bool EffectPicasso::picassoRoutine2(CRGB *leds, EffectDesc *param){
+  generate();
+  position();
+  myLamp.dimAll(180);
+
+  for (unsigned i = 0; i < numParticles - 1; i++) {
+    Particle *p1 = (Particle *)&particles[i];
+    Particle *p2 = (Particle *)&particles[i + 1];
+    myLamp.drawLineF(p1->position_x, p1->position_y, p2->position_x, p2->position_y, p1->color);
+  }
+
+  EVERY_N_MILLIS(20000){
+    generate(true);
+  }
+
+  myLamp.blur2d(80);
+
+  return true;
+}
+
+bool EffectPicasso::picassoRoutine3(CRGB *leds, EffectDesc *param){
+  generate();
+  position();
+  myLamp.dimAll(180);
+
+  for (unsigned i = 0; i < numParticles - 2; i+=2) {
+    Particle *p1 = (Particle *)&particles[i];
+    Particle *p2 = (Particle *)&particles[i + 1];
+    myLamp.drawCircleF(std::abs(p1->position_x - p2->position_x), std::abs(p1->position_y - p2->position_y), std::abs(p1->position_x - p1->position_y), p1->color);
+  }
+
+  EVERY_N_MILLIS(20000){
+    generate(true);
+  }
+
+  myLamp.blur2d(80);
+
+  return true;
+}
+
+bool EffectPicasso::run(CRGB *ledarr, EffectDesc *opt){
+  if (dryrun())
+    return false;
+  if (effect == EFF_PICASSO) {
+    return picassoRoutine(*&ledarr, &*opt);
+  }
+  if (effect == EFF_PICASSO2) {
+    return picassoRoutine2(*&ledarr, &*opt);
+  }
+  return picassoRoutine3(*&ledarr, &*opt);
+}
+
+void EffectLeapers::restart_leaper(Leaper * l) {
+  // leap up and to the side with some random component
+  l->xd = (1 * (float)random(1, 100) / 100);
+  l->yd = (2 * (float)random(1, 100) / 100);
+
+  // for variety, sometimes go 50% faster
+  if (random8() < 12) {
+    l->xd += l->xd * 0.5;
+    l->yd += l->yd * 0.5;
+  }
+
+  // leap towards the centre of the screen
+  if (l->x > (WIDTH / 2)) {
+    l->xd = -l->xd;
+  }
+}
+
+void EffectLeapers::move_leaper(Leaper * l) {
+#define GRAVITY            0.06
+#define SETTLED_THRESHOLD  0.1
+#define WALL_FRICTION      0.95
+#define WIND               0.95    // wind resistance
+
+  l->x += l->xd;
+  l->y += l->yd;
+
+  // bounce off the floor and ceiling?
+  if (l->y < 0 || l->y > HEIGHT - 1) {
+    l->yd = (-l->yd * WALL_FRICTION);
+    l->xd = ( l->xd * WALL_FRICTION);
+    l->y += l->yd;
+    if (l->y < 0) l->y = 0;
+    // settled on the floor?
+    if (l->y <= SETTLED_THRESHOLD && abs(l->yd) <= SETTLED_THRESHOLD) {
+      restart_leaper(l);
+    }
+  }
+
+  // bounce off the sides of the screen?
+  if (l->x <= 0 || l->x >= WIDTH - 1) {
+    l->xd = (-l->xd * WALL_FRICTION);
+    if (l->x <= 0) {
+      l->x = l->xd;
+    } else {
+      l->x = WIDTH - 1 - l->xd;
+    }
+  }
+
+  l->yd -= GRAVITY;
+  l->xd *= WIND;
+  l->yd *= WIND;
+}
+
+void EffectLeapers::generate(bool reset){
+  unsigned num = map(scale, 0U, 255U, 6U, sizeof(leapers) / sizeof(*leapers));
+
+  for (unsigned i = numParticles; i < num; i++) {
+    Leaper *curr = (Leaper *)&leapers[i];
+    curr->x = random(0, WIDTH);
+    curr->y = random(0, HEIGHT);
+
+    curr->color = CHSV(random(1U, 255U), 255U, 255U);
+  };
+  numParticles = num;
+}
+
+bool EffectLeapers::leapersRoutine(CRGB *leds, EffectDesc *param){
+  generate();
+
+  myLamp.dimAll(0);
+
+  for (unsigned i = 0; i < numParticles; i++) {
+    move_leaper(&leapers[i]);
+    myLamp.drawPixelXYF(leapers[i].x, leapers[i].y, leapers[i].color);
+  };
+
+  myLamp.blur2d(20);
+  return true;
+}
+
+bool EffectLeapers::run(CRGB *ledarr, EffectDesc *opt){
+  if (dryrun())
+    return false;
+  return leapersRoutine(*&ledarr, &*opt);
+}
 //--------------
 bool EffectTime::run(CRGB *ledarr, EffectDesc *opt){
   if((millis() - lastrun - EFFECTS_RUN_TIMER) < (unsigned)((255-speed)) && (speed==1 || speed==255)){
@@ -3231,6 +3412,14 @@ void EffectWorker::workerset(EFF_ENUM effect){
     break;
   case EFF_ENUM::EFF_CUBE2 :
     worker = std::unique_ptr<EffectCube2d>(new EffectCube2d());
+    break;
+  case EFF_ENUM::EFF_PICASSO :
+  case EFF_ENUM::EFF_PICASSO2 :
+  case EFF_ENUM::EFF_PICASSO3 :
+    worker = std::unique_ptr<EffectPicasso>(new EffectPicasso());
+    break;
+  case EFF_ENUM::EFF_LEAPERS :
+    worker = std::unique_ptr<EffectLeapers>(new EffectLeapers());
     break;
   case EFF_ENUM::EFF_RAIN :
   case EFF_ENUM::EFF_COLORRAIN :

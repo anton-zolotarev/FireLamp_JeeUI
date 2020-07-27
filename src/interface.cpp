@@ -157,14 +157,14 @@ void set_effects_config_list(Interface *interf, JsonObject *data){
 void block_effects_param(Interface *interf, JsonObject *data){
     if (!interf) return;
     interf->json_section_begin(F("effects_param"));
-    if (myLamp.IsGlobalBrightness() || myLamp.getMode() == MODE_DEMO) {
+    if (myLamp.IsGlobalBrightness()) {
         interf->range(F("bright"), myLamp.getNormalizedLampBrightness(), 1, 255, 1, F("Глоб. яркость"), true);
     } else {
         interf->range(F("bright"), myLamp.getNormalizedLampBrightness(), 1, 255, 1, F("Яркость"), true);
     }
     interf->range(F("speed"), myLamp.effects.getSpeedS(), 1, 255, 1, F("Скорость"), true);
     interf->range(F("scale"), myLamp.effects.getScaleS(), 1, 255, 1, F("Масштаб"), true);
-    if (myLamp.effects.isRval()) {
+    if (myLamp.effects.isRvalS()) {
         interf->range(F("rval"), myLamp.effects.getRvalS(), 1, 255, 1, F("Масштаб"), true);
     }
 
@@ -264,8 +264,6 @@ void block_main_flags(Interface *interf, JsonObject *data){
     interf->checkbox(F("Events"), myLamp.IsEventsHandled()? F("true") : F("false"), F("События"), true);
 #ifdef MIC_EFFECTS
     interf->checkbox(F("Mic"), F("Микр."), true);
-#else
-    interf->hidden("nil");
 #endif
 #ifdef AUX_PIN
     interf->checkbox(F("AUX"), F("AUX"), true);
@@ -385,6 +383,7 @@ void set_gbrflag(Interface *interf, JsonObject *data){
     if (myLamp.isLampOn()) {
         myLamp.setBrightness(myLamp.getNormalizedLampBrightness());
     }
+    show_effects_param(interf, data);
 }
 
 void block_lamp_config(Interface *interf, JsonObject *data){
@@ -468,6 +467,7 @@ void edit_lamp_config(Interface *interf, JsonObject *data){
 #endif
     } else
     if (act == "load") {
+        myLamp.changePower(false);
         String filename = String(F("/glb/")) + name;
         jee.load(filename.c_str());
 
@@ -484,6 +484,8 @@ void edit_lamp_config(Interface *interf, JsonObject *data){
         }
 #endif
         jee.var(F("fileName"), name);
+        sync_parameters();
+        myLamp.changePower(true);
     } else {
         String filename = String(F("/glb/")) + name;
         jee.save(filename.c_str(), true);
@@ -521,7 +523,7 @@ void set_lamp_textsend(Interface *interf, JsonObject *data){
     jee.var(F("msg"), (*data)[F("msg")]);
 
     tmpStr.replace(F("#"), F("0x"));
-    myLamp.sendStringToLamp((*data)[F("msg")], (CRGB::HTMLColorCode)strtol(tmpStr.c_str(), NULL, 0));
+    myLamp.sendString((*data)[F("msg")], (CRGB::HTMLColorCode)strtol(tmpStr.c_str(), NULL, 0));
 }
 
 void block_lamp(Interface *interf, JsonObject *data){
@@ -544,9 +546,9 @@ void block_settings_mic(Interface *interf, JsonObject *data){
     interf->json_section_begin(F("set_mic"));
     //if (!iGLOBAL.isMicCal) {
     if (!myLamp.isMicCalibration()) {
-        interf->number(F("micScale"), myLamp.getMicScale(), F("Коэф. коррекции нуля"), 0.01);
-        interf->number(F("micNoise"), myLamp.getMicNoise(), F("Уровень шума, ед"), 0.01);
-        interf->range(F("micnRdcLvl"), myLamp.getMicNoiseRdcLevel(), 4, 1, F("Шумодав"));
+        interf->number(F("micScale"), (float)(round(myLamp.getMicScale() * 100) / 100), F("Коэф. коррекции нуля"), 0.01);
+        interf->number(F("micNoise"), (float)(round(myLamp.getMicNoise() * 100) / 100), F("Уровень шума, ед"), 0.01);
+        interf->range(F("micnRdcLvl"), (int)myLamp.getMicNoiseRdcLevel(), 0, 4, (float)1.0, F("Шумодав"), false);
     }
     interf->button_submit(F("set_mic"), F("Сохранить"), F("grey"));
     interf->json_section_end();
@@ -600,21 +602,27 @@ void set_settings_mic_calib(Interface *interf, JsonObject *data){
 }
 #endif
 
+// формирование интерфейса настроек WiFi/MQTT
 void block_settings_wifi(Interface *interf, JsonObject *data){
     if (!interf) return;
     interf->json_section_main(F("settings_wifi"), F("WiFi"));
     // форма настроек Wi-Fi
-    interf->json_section_hidden(F("set_wifi"), F("WiFi"));
 
-    interf->select(F("wifi"), F("Режим WiFi"));
-    interf->option(F("STA"), F("STA"));
-    interf->option(F("AP"), F("AP"));
+    interf->json_section_hidden(F("set_wifi"), F("WiFi Client"));
+    interf->spacer(F("Настройки WiFi-клиента"));
+    interf->text(F("hostname"), F("Имя лампы (mDNS Hostname/AP-SSID)"));
+    interf->text(F("wcssid"), WiFi.SSID(), F("WiFi SSID"));
+    interf->password(F("wcpass"), F("Password"));
+    interf->button_submit(F("set_wifi"), F("Подключиться"), F("gray"));
     interf->json_section_end();
 
-    interf->text(F("ap_ssid"), F("AP/mDNS"));
-    interf->text(F("ssid"), F("SSID"));
-    interf->password(F("pass"), F("Password"));
-    interf->button_submit(F("set_wifi"), F("Connect"), F("gray"));
+    interf->json_section_hidden(F("set_wifiAP"), F("WiFi AP"));
+    interf->text(F("hostname"), F("Имя лампы (mDNS Hostname/AP-SSID)"));
+    interf->spacer(F("Настройки WiFi-точки доступа"));
+    interf->comment(F("В режиме AP-only лампа всегда работает как точка доступа и не будет подключаться к другим WiFi-сетям"));
+    interf->checkbox(F("APonly"), F("Режим AP-only"), false);
+    interf->password(F("APpwd"), F("Защитить AP паролем"));
+    interf->button_submit(F("set_wifiAP"), F("Сохранить"), F("gray"));
     interf->json_section_end();
 
     // форма настроек MQTT
@@ -638,21 +646,35 @@ void show_settings_wifi(Interface *interf, JsonObject *data){
     interf->json_frame_interface();
     block_settings_wifi(interf, data);
     interf->json_frame_flush();
-    myLamp.setForceWifi(true);
+}
+
+void set_settings_wifiAP(Interface *interf, JsonObject *data){
+    if (!data) return;
+
+    SETPARAM(F("hostname"));
+    SETPARAM(F("APonly"));
+    SETPARAM(F("APpwd"));
+
+    jee.save();
+    jee.wifi_connect();
+
+    section_settings_frame(interf, data);
 }
 
 void set_settings_wifi(Interface *interf, JsonObject *data){
     if (!data) return;
-    SETPARAM(F("ap_ssid"));
-    SETPARAM(F("ssid"));
-    SETPARAM(F("pass"));
 
-    SETPARAM(F("wifi"));
-    //jee.var(F("wifi"), F("STA"));
-    jee.save();
-    //ESP.restart();
-    if(millis()>30000) // после реконекта пытается снова выполнить эту секцию, хз как правильно, делаю так, прошу подправить
-        jee.wifi_connect();
+    SETPARAM(F("hostname"));
+
+    const char *ssid = (*data)[F("wcssid")];
+    const char *pwd = (*data)[F("wcpass")];
+
+    if (ssid) {
+        if (interf) interf->close();
+        jee.wifi_connect(ssid, pwd);
+    } else {
+        LOG(println, F("WiFi: No SSID defined!"));
+    }
 
     section_settings_frame(interf, data);
 }
@@ -667,9 +689,8 @@ void set_settings_mqtt(Interface *interf, JsonObject *data){
     //m_pref
 
     jee.save();
-    //ESP.restart();
-    if(millis()>30000) // после реконекта пытается снова выполнить эту секцию, хз как правильно, делаю так, прошу подправить
-        jee.wifi_connect();
+    //if(millis()>30000) // после реконекта пытается снова выполнить эту секцию, хз как правильно, делаю так, прошу подправить
+        //jee.wifi_connect();
 
     section_settings_frame(interf, data);
 }
@@ -739,10 +760,10 @@ void block_settings_time(Interface *interf, JsonObject *data){
     if (!interf) return;
     interf->json_section_main(F("set_time"), F("Время"));
 
-    interf->time(F("time"), F("Время"));
-    interf->number(F("tm_offs"), F("Смещение времени в секундах для NTP"));
-    interf->text(F("timezone"), F("Часовой пояс (http://worldtimeapi.org/api/timezone/)"));
-    interf->checkbox(F("isTmSync"), F("Включить синхронизацию"));
+    interf->comment(F("Правила TZSET учета поясного/сезонного времени (напр 'MSK-3' для Europe/Moscow) Нужную строку можно взять тут https://github.com/esp8266/Arduino/blob/master/cores/esp8266/TZ.h"));
+    interf->text(F("TZSET"), F("правило TZone (рекоммендуется задать!)"));
+    interf->text(F("userntp"), F("резервный NTP-сервер (не обязательно)"));
+    interf->text(F("setdatetime"), F("Дата/время в формате YYYY-MM-DDThh:mm:ss (если нет интернета)"));
     interf->button_submit(F("set_time"), F("Сохранить"), F("gray"));
 
     interf->spacer();
@@ -760,17 +781,14 @@ void show_settings_time(Interface *interf, JsonObject *data){
 
 void set_settings_time(Interface *interf, JsonObject *data){
     if (!data) return;
-/*
-    // пока решаем чего хотим в этом месте
-    SETPARAM(F("tm_offs"), myLamp.timeProcessor.setOffset((*data)[F("tm_offs")]));
-    SETPARAM(F("timezone"), myLamp.timeProcessor.setTimezone((*data)[F("timezone")]));
-    SETPARAM(F("time"), myLamp.timeProcessor.setTime((*data)[F("time")]));
-    SETPARAM(F("isTmSync"), myLamp.timeProcessor.setIsSyncOnline((*data)[F("isTmSync")] == F("true")));
 
-    if (myLamp.timeProcessor.getIsSyncOnline()) {
-        myLamp.refreshTimeManual(); // принудительное обновление времени
-    }
-*/
+        String datetime=(*data)[F("setdatetime")];
+        if (datetime.length())
+            myLamp.timeProcessor.setTime(datetime);
+
+    SETPARAM(F("TZSET"), myLamp.timeProcessor.tzsetup((*data)[F("TZSET")]));
+    SETPARAM(F("userntp"), myLamp.timeProcessor.setcustomntp((*data)[F("userntp")]));
+
     myLamp.sendStringToLamp(myLamp.timeProcessor.getFormattedShortTime().c_str(), CRGB::Green);
 
     section_settings_frame(interf, data);
@@ -1081,7 +1099,7 @@ void show_butt_conf(Interface *interf, JsonObject *data){
 
     interf->checkbox(F("on"), (btn? btn->flags.on : 0)? F("true") : F("false"), F("ON/OFF"), false);
     interf->checkbox(F("hold"), (btn? btn->flags.hold : 0)? F("true") : F("false"), F("Удержание"), false);
-    interf->number(F("clicks"), (btn? btn->flags.click : 0), F("Нажатия"));
+    interf->number(F("clicks"), (btn? btn->flags.click : 0), F("Нажатия"), 0, 7);
 
     if (btn) {
         interf->hidden(F("save"), F("true"));
@@ -1158,8 +1176,8 @@ void section_main_frame(Interface *interf, JsonObject *data){
 
     interf->json_frame_flush();
 
-    if(!jee.connected && myLamp.isForceWifi()){
-        // только для первого раза форсируем выбор вкладки настройки WiFi, дальше этого не делаем
+    if(!jee.wifi_sta){
+        // форсируем выбор вкладки настройки WiFi если контроллер не подключен к внешней AP
         show_settings_wifi(interf, data);
     }
 
@@ -1172,9 +1190,14 @@ void section_main_frame(Interface *interf, JsonObject *data){
 void create_parameters(){
     LOG(println, F("Создание дефолтных параметров"));
     // создаем дефолтные параметры для нашего проекта
-    jee.var_create(F("wifi"), F("STA")); // режим работы WiFi по умолчанию ("STA" или "AP")  (параметр в энергонезависимой памяти)
-    jee.var_create(F("ssid"), F("")); // имя точки доступа к которой подключаемся (параметр в энергонезависимой памяти)
-    jee.var_create(F("pass"), F("")); // пароль точки доступа к которой подключаемся (параметр в энергонезависимой памяти)
+
+    //WiFi
+    jee.var_create(F("hostname"), F(""));
+    jee.var_create(F("APonly"), F(""));     // режим AP-only (только точка доступа)
+    jee.var_create(F("APpwd"), F(""));      // пароль внутренней точки доступа
+//    jee.var_create(F("ssid"), F(""));     // режим AP-only (только точка доступа)
+//    jee.var_create(F("pass"), F(""));      // пароль внутренней точки доступа
+
 
     // параметры подключения к MQTT
     jee.var_create(F("m_host"), F("")); // Дефолтные настройки для MQTT
@@ -1205,10 +1228,9 @@ void create_parameters(){
     jee.var_create(F("GBR"), F("false"));
     jee.var_create(F("GlobBRI"), F("127"));
 
-    jee.var_create(F("isTmSync"), F("true"));
-    jee.var_create(F("time"), F("00:00"));
-    jee.var_create(F("timezone"), F(""));
-    jee.var_create(F("tm_offs"), F("0"));
+    // date/time related vars
+    jee.var_create(F("TZSET"), "");
+    jee.var_create(F("userntp"), "");
 
     jee.var_create(F("ny_period"), F("0"));
     jee.var_create(F("ny_unix"), F("1609459200"));
@@ -1270,6 +1292,7 @@ void create_parameters(){
     jee.section_handle_add(F("settings"), section_settings_frame);
     jee.section_handle_add(F("show_wifi"), show_settings_wifi);
     jee.section_handle_add(F("set_wifi"), set_settings_wifi);
+    jee.section_handle_add(F("set_wifiAP"), set_settings_wifiAP);
     jee.section_handle_add(F("set_mqtt"), set_settings_mqtt);
     jee.section_handle_add(F("show_other"), show_settings_other);
     jee.section_handle_add(F("set_other"), set_settings_other);
@@ -1300,6 +1323,10 @@ void sync_parameters(){
     CALL_SETTER(F("effList"), jee.param(F("effList")), set_effects_list);
     CALL_SETTER(F("Events"), jee.param(F("Events")), set_eventflag);
     CALL_SETTER(F("GBR"), jee.param(F("GBR")), set_gbrflag);
+
+    if (myLamp.IsGlobalBrightness()) {
+        CALL_SETTER(F("bright"), jee.param(F("GlobBRI")), set_effects_bright);
+    }
 
 #ifdef RESTORE_STATE
     CALL_SETTER(F("ONflag"), jee.param(F("ONflag")), set_onflag);
@@ -1334,10 +1361,6 @@ void sync_parameters(){
     obj[F("ny_unix")] = jee.param(F("ny_unix"));
     set_settings_other(nullptr, &obj);
     obj.clear();
-
-    if (myLamp.IsGlobalBrightness() || myLamp.getMode() == MODE_DEMO) {
-        CALL_SETTER(F("bright"), jee.param(F("GlobBRI")), set_effects_bright);
-    }
 }
 
 void remote_action(RA action, ...){
@@ -1424,6 +1447,9 @@ void remote_action(RA action, ...){
         case RA::RA_REBOOT:
             ESP.restart(); // так лучше :)
             break;
+        case RA::RA_WIFI_REC:
+            CALL_INTF(F("wifi"), F("STA"), set_settings_wifi);
+            break;
         case RA::RA_LAMP_CONFIG:
             if (value && *value) {
                 String filename = String(F("/glb/"));
@@ -1447,10 +1473,13 @@ void remote_action(RA action, ...){
             break;
         case RA::RA_SEND_TEXT: {
             String tmpStr = jee.param(F("txtColor"));
-            tmpStr.replace(F("#"),F("0x"));
-            CRGB::HTMLColorCode color = (CRGB::HTMLColorCode)strtol(tmpStr.c_str(), NULL, 0);
+            if (value && *value) {
+                String tmpStr = jee.param(F("txtColor"));
+                tmpStr.replace(F("#"),F("0x"));
+                CRGB::HTMLColorCode color = (CRGB::HTMLColorCode)strtol(tmpStr.c_str(), NULL, 0);
 
-            myLamp.sendString(value, color);
+                myLamp.sendString(value, color);
+            }
             break;
         }
         case RA::RA_SEND_IP:
@@ -1577,7 +1606,9 @@ void default_buttons(){
     myButtons.add(new Button(true, false, 1, BA::BA_OFF)); // 1 клик - OFF
     myButtons.add(new Button(true, false, 2, BA::BA_EFF_NEXT)); // 2 клика - след эффект
     myButtons.add(new Button(true, false, 3, BA::BA_EFF_PREV)); // 3 клика - пред эффект
+#ifdef OTA
     myButtons.add(new Button(true, false, 4, BA::BA_OTA)); // 4 клика - OTA
+#endif
     myButtons.add(new Button(true, false, 5, BA::BA_SEND_IP)); // 5 клика - показ IP
     myButtons.add(new Button(true, false, 6, BA::BA_SEND_TIME)); // 6 клика - показ времени
     myButtons.add(new Button(true, true, 0, BA::BA_BRIGHT)); // удержание яркость
@@ -1585,3 +1616,17 @@ void default_buttons(){
     myButtons.add(new Button(true, true, 2, BA::BA_SCALE)); // удержание + 2 клика масштаб
 }
 #endif
+
+void uploadProgress(size_t len, size_t total){
+    static int prev = 0;
+    float part = total / 50.0;
+    int curr = len / part;
+    if (curr != prev) {
+        prev = curr;
+        for (int i = 0; i < curr; i++) Serial.print(F("="));
+        Serial.print(F("\n"));
+    }
+#ifdef VERTGAUGE
+    myLamp.GaugeShow(len, total, 100);
+#endif
+}

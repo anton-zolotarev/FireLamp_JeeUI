@@ -21,6 +21,7 @@ typedef enum _button_action {
 	BA_SEND_IP,
 	BA_WHITE_HI,
 	BA_WHITE_LO,
+	BA_WIFI_REC,
 	BA_END			// признак конца enum
 } BA;
 
@@ -46,7 +47,7 @@ class Button{
 		Button(uint8_t on, uint8_t hold, uint8_t click, BA act = BA_NONE) { direction = false; flags.mask = 0; flags.on = on; flags.hold = hold; flags.click = click; action = act; }
 		Button(uint8_t mask, BA act = BA_NONE) { direction = false; flags.mask = mask; action = act; }
 
-		void activate(bool reverse);
+		bool activate(bool reverse);
 		String getName();
 
 		BA action;
@@ -66,10 +67,9 @@ class Buttons {
 	byte clicks = 0;
 	Ticker _buttonTicker; // планировщик кнопки
 	LList<Button*> buttons;
+	timerMinim holdtm; // таймаут удержания кнопки в мс
 
 	public:
-	timerMinim tmNumHoldTimer; // таймаут удержания кнопки в мс
-
 	bool getpinTransition() { return pinTransition; }
 	void setpinTransition(bool val) { pinTransition = val; }
 
